@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <base target="_top">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boulder Chevra Kadisha Volunteer Portal</title>
+    
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Google Fonts: Karla (Text) and Playfair Display (Headline Substitute for Adonis) -->
+    <link href="https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    
+    <script>
+        // Configure Tailwind to use the custom colors and fonts
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-background': '#F9F4ED', // F9F4ED
+                        'brand-text': '#3D4066',     // 3D4066
+                        'brand-accent': '#0072BC',    // E0A960 (Outline/Border)
+                        'brand-signup': '#0072BC',    // 0072BC (Buttons/Action Blue)
+                        'brand-full': '#F05252',      // Color for full shifts/drop action (kept red for warning)
+                        'brand-cancel': '#A63A3A',    // Red, requested by user
+                        // Background color for the information section, requested by user
+                        'brand-info-bg': '#EAE0D6', 
+                    },
+                    fontFamily: {
+                        headline: ['"Playfair Display"', 'serif'], // Adonis Substitute
+                        text: ['Karla', 'sans-serif'],
+                    },
+                },
+            }
+        }
+    </script>
+    <style>
+        /* Apply brand colors and base font globally */
+        body {
+            background-color: #F9F4ED;
+            color: #3D4066;
+            font-family: 'Karla', sans-serif;
+            min-height: 100vh;
+        }
+        /* Explicitly apply headline font */
+        .font-headline {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Hide element until data is loaded */
+        .hidden-until-load {
+            display: none;
+        }
+        /* Style for the floating bulk action bar */
+        #bulk-action-container {
+            transition: transform 0.3s ease-out;
+        }
+        /* Custom styles for the required confirm() replacement since window.confirm() is forbidden */
+        .custom-confirm-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .custom-confirm-content {
+            background: white;
+            padding: 24px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="font-text antialiased">
+
+    <!-- Loading Overlay -->
+    <div id="loading" class="fixed inset-0 bg-brand-background/90 flex flex-col items-center justify-center z-50">
+        <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-brand-accent border-solid"></div>
+        <p class="mt-4 text-brand-text text-xl font-headline">Loading Shifts...</p>
+    </div>
+
+    <!-- Header / Navigation -->
+    <header id="app-header" class="bg-brand-background shadow-md hidden-until-load">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+            
+            <!-- Title Only -->
+            <div class="mb-2 sm:mb-0">
+                <h1 class="text-2xl font-headline font-bold text-brand-text">Boulder Chevra Kadisha</h1>
+            </div>
+            
+            <p id="welcome-message" class="text-lg text-brand-text/80 font-semibold"></p>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 hidden-until-load">
+        
+        <!-- Error/Message Box -->
+        <div id="message-box" class="hidden p-4 mb-6 rounded-lg font-bold shadow-md" role="alert"></div>
+        
+        <!-- Dynamic Event Information Section -->
+        <section id="event-info-section" class="hidden bg-brand-info-bg text-brand-text p-6 mb-8 rounded-xl shadow-lg border-l-4 border-brand-accent">
+            <h2 class="text-2xl font-headline font-bold mb-3">Current Shmira Information</h2>
+            <div class="space-y-2 text-sm">
+                <!-- Event Name -->
+                <div class="flex items-start">
+                    <span class="font-bold w-32 shrink-0">Deceased Name</span>
+                    <span id="event-name" class="font-headline font-bold text-lg text-brand-signup"></span>
+                </div>
+                <!-- Location -->
+                <div class="flex items-start">
+                    <span class="font-bold w-32 shrink-0">Location</span>
+                    <span id="event-address"></span>
+                </div>
+                <!-- Bio -->
+                <div class="flex items-start">
+                    <span class="font-bold w-32 shrink-0">Personal Info</span>
+                    <span id="event-bio" class="italic"></span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Tabbed Shift View -->
+        <div class="mb-8">
+            <h2 class="text-3xl font-headline font-semibold text-brand-text mb-4">Available Shifts & Your Signups</h2>
+            <div class="flex border-b border-brand-text/20 mb-4">
+                <button id="tab-available" onclick="showTab('available')" class="px-4 py-2 text-lg font-semibold border-b-2 border-brand-accent text-brand-accent transition duration-300">
+                    Available Shifts
+                </button>
+                <button id="tab-signedup" onclick="showTab('signedup')" class="px-4 py-2 text-lg font-semibold border-b-2 border-transparent text-brand-text/60 hover:text-brand-accent transition duration-300">
+                    Your Signed Up Shifts (<span id="signedup-count">0</span>)
+                </button>
+            </div>
+            
+            <!-- Available Shifts Container -->
+            <div id="shifts-available" class="space-y-4">
+                <p id="no-available-shifts" class="hidden text-lg italic text-brand-text/70">No shifts are currently available.</p>
+            </div>
+
+            <!-- Signed Up Shifts Container -->
+            <div id="shifts-signedup" class="space-y-4 hidden">
+                <!-- Shifts will be rendered here -->
+            </div>
+        </div>
+
+    </main>
+    
+    <!-- Modal for Bulk Signup Confirmation -->
+    <div id="bulk-signup-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="closeBulkModal()">
+        <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full" onclick="event.stopPropagation()">
+            <h3 class="text-xl font-headline font-bold mb-4 text-brand-text">Confirm Multiple Signups</h3>
+            <p class="mb-6 text-brand-text">You are about to sign up for <span id="shifts-to-confirm-count" class="font-bold text-brand-signup">0</span> shifts. Are you sure you want to proceed?</p>
+            <div class="flex justify-end space-x-3">
+                <button onclick="closeBulkModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300 font-semibold">
+                    Cancel
+                </button>
+                <button onclick="performBulkSignup()" class="px-4 py-2 bg-brand-signup text-white rounded-lg hover:bg-brand-signup/90 transition duration-300 font-bold shadow-lg">
+                    Confirm Signups
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Custom Confirmation Modal (Replaces window.confirm) -->
+    <div id="custom-confirm" class="hidden custom-confirm-modal">
+        <div class="custom-confirm-content">
+            <h4 id="confirm-title" class="text-xl font-headline font-bold mb-3 text-brand-text">Confirm Action</h4>
+            <p id="confirm-message" class="mb-6 text-brand-text"></p>
+            <div class="flex justify-center space-x-3">
+                <button id="confirm-cancel" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300 font-semibold">
+                    Cancel
+                </button>
+                <button id="confirm-ok" class="px-4 py-2 bg-brand-signup text-white rounded-lg hover:bg-brand-signup/90 transition duration-300 font-bold shadow-lg">
+                    OK
+                </button>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Client-Side JavaScript -->
+    <script>
+        // Server-side injected variables
+        const volunteerName = '<?= volunteerName ?>';
+        const volunteerToken = '<?= volunteerToken ?>';
+
+        let ALL_SHIFTS = [];
+        let SIGNED_UP_SHIFT_IDS = [];
+        let CURRENT_EVENT_INFO = null; // New variable to hold current event details
+        let CURRENT_TAB = 'available';
+        
+        // Callback function for the custom confirmation modal
+        let confirmActionCallback = null;
+
+        const dom = {
+            loading: document.getElementById('loading'),
+            header: document.getElementById('app-header'),
+            mainContent: document.getElementById('main-content'),
+            welcomeMessage: document.getElementById('welcome-message'),
+            messageBox: document.getElementById('message-box'),
+            availableShifts: document.getElementById('shifts-available'),
+            signedUpShifts: document.getElementById('shifts-signedup'),
+            signedUpCount: document.getElementById('signedup-count'),
+            noAvailableShifts: document.getElementById('no-available-shifts'),
+            tabAvailable: document.getElementById('tab-available'),
+            tabSignedup: document.getElementById('tab-signedup'),
+            bulkModal: document.getElementById('bulk-signup-modal'),
+            shiftsToConfirmCount: document.getElementById('shifts-to-confirm-count'),
+            
+            // New Event Info Section elements
+            eventInfoSection: document.getElementById('event-info-section'),
+            eventName: document.getElementById('event-name'),
+            eventAddress: document.getElementById('event-address'),
+            eventBio: document.getElementById('event-bio'),
+            
+            // Custom Confirmation Modal elements
+            customConfirm: document.getElementById('custom-confirm'),
+            confirmTitle: document.getElementById('confirm-title'),
+            confirmMessage: document.getElementById('confirm-message'),
+            confirmOk: document.getElementById('confirm-ok'),
+            confirmCancel: document.getElementById('confirm-cancel'),
+            
+            // Bulk action button (added to DOM dynamically)
+            bulkActionButton: null
+        };
+        
+        // --- UTILITIES ---
+
+        /**
+         * Formats an epoch timestamp (milliseconds) into the requested short date string: Day Month/Date/Year.
+         * E.g., Tue 10/28/2025
+         * @param {number} epochTime - The epoch timestamp (in milliseconds) from shift.startTimeEpoch.
+         * @returns {string} The formatted date string.
+         */
+        function formatShortDate(epochTime) {
+            const date = new Date(epochTime);
+            // Get the short weekday name (e.g., 'Tue')
+            const dayOptions = { weekday: 'short' };
+            const dayName = date.toLocaleDateString('en-US', dayOptions);
+
+            // Get the numerical components
+            const month = date.getMonth() + 1; // getMonth() returns 0-11
+            const dateOfMonth = date.getDate();
+            const year = date.getFullYear();
+
+            // Assemble the string in the requested format: Day Month/Date/Year
+            return `${dayName} ${month}/${dateOfMonth}/${year}`;
+        }
+        
+        /** Shows a temporary message in the message box. */
+        function showMessage(message, type = 'success') {
+            const box = dom.messageBox;
+            box.textContent = message;
+            box.classList.remove('hidden', 'bg-green-100', 'border-green-400', 'text-green-700', 'bg-red-100', 'border-red-400', 'text-red-700', 'bg-yellow-100', 'border-yellow-400', 'text-yellow-700');
+
+            if (type === 'success') {
+                box.classList.add('bg-green-100', 'border', 'border-green-400', 'text-green-700');
+            } else if (type === 'error') {
+                box.classList.add('bg-red-100', 'border', 'border-red-400', 'text-red-700');
+            } else if (type === 'warning') {
+                box.classList.add('bg-yellow-100', 'border', 'border-yellow-400', 'text-yellow-700');
+            }
+            
+            setTimeout(() => box.classList.add('hidden'), 7000); // Hide after 7 seconds
+        }
+
+        /**
+         * Custom replacement for window.confirm()
+         * @param {string} message - The message to show.
+         * @param {function} callback - Function to execute (true for OK, false for Cancel).
+         * @param {string} title - Optional title.
+         */
+        function customConfirm(message, callback, title = 'Confirm Action') {
+            dom.confirmTitle.textContent = title;
+            dom.confirmMessage.textContent = message;
+            dom.customConfirm.classList.remove('hidden');
+            confirmActionCallback = callback;
+        }
+
+        /** Initialize the confirmation modal buttons */
+        function initConfirmModal() {
+            dom.confirmOk.onclick = () => {
+                dom.customConfirm.classList.add('hidden');
+                if (confirmActionCallback) {
+                    confirmActionCallback(true);
+                }
+            };
+            dom.confirmCancel.onclick = () => {
+                dom.customConfirm.classList.add('hidden');
+                if (confirmActionCallback) {
+                    confirmActionCallback(false);
+                }
+            };
+        }
+
+        // --- DATA FETCHING & UI LOGIC ---
+
+        /** Called on page load to fetch shift and signup data. */
+        function initializePortal() {
+            initConfirmModal(); // Initialize custom modal handlers
+
+            if (!volunteerToken) {
+                dom.loading.innerHTML = '<h2 class="text-3xl text-brand-text font-headline">Access Denied</h2><p class="mt-4 text-lg">Your personalized link is missing a security token. Please use the unique link provided in your email.</p>';
+                return;
+            }
+
+            dom.welcomeMessage.textContent = `Hello, ${volunteerName}!`;
+            
+            // Initial fetch from server
+            google.script.run
+                .withSuccessHandler(loadShifts)
+                .withFailureHandler(handleServerError)
+                // ASSUMPTION: The backend is updated to send currentEvent info
+                .getShiftsAndSignups(volunteerToken);
+        }
+
+        /** Handles success response from getShiftsAndSignups. */
+        function loadShifts(data) {
+            dom.loading.classList.add('hidden');
+            dom.header.classList.remove('hidden-until-load');
+            dom.mainContent.classList.remove('hidden-until-load');
+
+            if (data.error) {
+                showMessage(data.error, 'error');
+                return;
+            }
+
+            ALL_SHIFTS = data.allShifts || [];
+            SIGNED_UP_SHIFT_IDS = data.signedUpShiftIds || [];
+            CURRENT_EVENT_INFO = data.currentEvent || null; // Capture the new event info
+            
+            renderEventInfo(); // Render the new event info section
+            renderShifts();
+            showTab(CURRENT_TAB);
+            
+            console.log("Data loaded successfully.");
+        }
+        
+        /** Renders the dynamic event information section. */
+        function renderEventInfo() {
+            if (CURRENT_EVENT_INFO && CURRENT_EVENT_INFO.eventName) {
+                // Formatting the event name, location, and bio for the info box
+                dom.eventName.textContent = CURRENT_EVENT_INFO.eventName || 'N/A';
+                dom.eventAddress.textContent = CURRENT_EVENT_INFO.address || 'Address pending or restricted.';
+                
+                let personalInfo = CURRENT_EVENT_INFO.bio;
+
+                // Apply conditional text if bio is empty or placeholder
+                if (!personalInfo || personalInfo.trim().length < 5 || personalInfo.toLowerCase().includes('no further personal details')) {
+                    personalInfo = '<span class="italic text-gray-500">Personal information coming.</span>';
+                }
+                
+                dom.eventBio.innerHTML = personalInfo;
+                
+                dom.eventInfoSection.classList.remove('hidden');
+            } else {
+                dom.eventInfoSection.classList.add('hidden');
+            }
+        }
+        
+        /** Renders the shift cards based on the current data state. */
+        function renderShifts() {
+            dom.availableShifts.innerHTML = '';
+            dom.signedUpShifts.innerHTML = '';
+            
+            let signedUpCount = 0;
+            let availableShiftsExist = false;
+
+            // Sort all shifts by start time
+            ALL_SHIFTS.sort((a, b) => a.startTimeEpoch - b.startTimeEpoch);
+
+            ALL_SHIFTS.forEach(shift => {
+                const isSignedUp = SIGNED_UP_SHIFT_IDS.includes(shift.id);
+                // Note: currentVolunteers and maxVolunteers still determine the 'FULL' status
+                const isFull = shift.currentVolunteers >= shift.maxVolunteers; 
+                const canSignup = !isSignedUp && !isFull;
+                
+                const shiftCard = createShiftCard(shift, isSignedUp, isFull, canSignup);
+
+                if (isSignedUp) {
+                    dom.signedUpShifts.appendChild(shiftCard);
+                    signedUpCount++;
+                } else if (!isFull) {
+                    dom.availableShifts.appendChild(shiftCard);
+                    availableShiftsExist = true;
+                }
+            });
+
+            dom.signedUpCount.textContent = signedUpCount;
+            dom.noAvailableShifts.classList.toggle('hidden', availableShiftsExist);
+            dom.signedUpShifts.classList.toggle('hidden', signedUpCount === 0 && CURRENT_TAB !== 'available');
+            
+            // Re-render bulk action components
+            renderBulkAction();
+        }
+
+        /** Creates the HTML structure for a single shift card. */
+        function createShiftCard(shift, isSignedUp, isFull, canSignup) {
+            const card = document.createElement('div');
+            // Updated border color to brand-accent
+            card.className = 'bg-white p-4 rounded-xl shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center border-l-4 ' + 
+                            (isSignedUp ? 'border-brand-accent' : (isFull ? 'border-brand-full/50' : 'border-brand-signup/50')) + 
+                            ' transition duration-300 hover:shadow-xl';
+
+            // --- Shift Details using server-provided eventDate and shiftTime ---
+            
+            // NEW: Format the date using the epoch time
+            const formattedDate = formatShortDate(shift.startTimeEpoch);
+
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'mb-3 sm:mb-0 sm:w-3/5';
+            detailsDiv.innerHTML = `
+                <p class="text-xl font-headline font-bold text-brand-text">${shift.eventName}</p>
+                
+                <!-- Location field (Pin icon removed) -->
+                <p class="text-base text-brand-text/90 mb-1">
+                    <span class="font-semibold">${shift.location || 'Location not specified'}</span>
+                </p>
+                
+                <p class="text-sm text-brand-text/80">
+                    <span class="font-semibold text-brand-text">${formattedDate}</span>
+                    <span class="text-brand-signup font-bold"> | ${shift.shiftTime}</span> <!-- Now uses the full time range -->
+                </p>
+            `;
+            // --- END of Shift Details ---
+            
+            card.appendChild(detailsDiv);
+
+            // Actions Column
+            const actionsDiv = document.createElement('div');
+            actionsDiv.className = 'flex items-center space-x-3 w-full sm:w-auto sm:justify-end';
+
+            if (isSignedUp) {
+                // Cancel Button (Text: "Cancel", Color: brand-cancel which is #677244)
+                const cancelBtn = document.createElement('button');
+                cancelBtn.textContent = 'Cancel'; 
+                // Uses brand-cancel (olive green color) and white text
+                cancelBtn.className = 'px-4 py-2 bg-brand-cancel text-white rounded-full text-sm hover:bg-brand-cancel/90 transition duration-300 shadow-md font-semibold';
+                cancelBtn.onclick = () => {
+                    // Update confirmation message to reflect "Cancel"
+                    customConfirm(`Are you sure you want to cancel the shift for ${shift.eventName} on ${formattedDate} at ${shift.shiftTime}?`, 
+                                (confirmed) => {
+                                    if (confirmed) handleAction('drop', shift.id); // Action remains 'drop'
+                                },
+                                'Confirm Cancellation'); // Update title
+                };
+                actionsDiv.appendChild(cancelBtn);
+                
+            } else if (canSignup) {
+                // Bulk Checkbox
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `bulk-check-${shift.id}`;
+                // Updated checkbox ring color to brand-signup
+                checkbox.className = 'h-5 w-5 text-brand-signup rounded border-gray-300 focus:ring-brand-signup transition duration-300 bulk-checkbox';
+                checkbox.dataset.shiftId = shift.id;
+                checkbox.onchange = () => updateBulkActionButton();
+                
+                // Signup Button (for single action) (Uses brand-signup)
+                const signupBtn = document.createElement('button');
+                signupBtn.textContent = 'Sign Up';
+                signupBtn.className = 'px-4 py-2 bg-brand-signup text-white rounded-full text-sm hover:bg-brand-signup/90 transition duration-300 shadow-md font-semibold w-full sm:w-auto';
+                signupBtn.onclick = () => {
+                    customConfirm(`Are you sure you want to sign up for the shift for ${shift.eventName} on ${formattedDate} at ${shift.shiftTime}?`, 
+                                (confirmed) => {
+                                    if (confirmed) handleAction('signup', shift.id);
+                                },
+                                'Confirm Sign Up');
+                };
+                
+                // Checkbox Wrapper
+                const checkboxWrapper = document.createElement('label');
+                checkboxWrapper.htmlFor = `bulk-check-${shift.id}`;
+                checkboxWrapper.className = 'flex items-center space-x-2 cursor-pointer';
+                checkboxWrapper.appendChild(checkbox);
+                
+                actionsDiv.appendChild(checkboxWrapper);
+                actionsDiv.appendChild(signupBtn);
+
+            } else if (isFull) {
+                // Full Status
+                const fullSpan = document.createElement('span');
+                fullSpan.textContent = 'FULL';
+                fullSpan.className = 'px-4 py-2 bg-gray-100 text-gray-500 border border-gray-300 rounded-full text-sm font-semibold w-full sm:w-auto text-center';
+                actionsDiv.appendChild(fullSpan);
+            }
+
+            card.appendChild(actionsDiv);
+            return card;
+        }
+        
+        // --- BULK ACTION LOGIC ---
+        
+        /** Renders or updates the floating bulk action button. */
+        function renderBulkAction() {
+            const bulkContainer = document.getElementById('bulk-action-container');
+            if (bulkContainer) bulkContainer.remove();
+
+            if (CURRENT_TAB !== 'available') return;
+            
+            const selectedCount = document.querySelectorAll('#shifts-available .bulk-checkbox:checked').length;
+            
+            const container = document.createElement('div');
+            container.id = 'bulk-action-container';
+            container.className = 'fixed bottom-0 left-0 right-0 p-4 bg-white shadow-2xl border-t border-brand-text/10 transition-transform duration-300 ease-out z-40 ' + 
+                                 (selectedCount > 0 ? 'translate-y-0' : 'translate-y-full');
+            
+            container.innerHTML = `
+                <div class="max-w-7xl mx-auto flex justify-between items-center">
+                    <p class="text-lg font-semibold text-brand-text">
+                        <span id="bulk-selected-count">${selectedCount}</span> shifts selected.
+                    </p>
+                    <button id="bulk-signup-btn" onclick="openBulkModal()" class="px-6 py-3 bg-brand-signup text-white rounded-lg shadow-xl hover:bg-brand-signup/90 transition duration-300 font-bold disabled:opacity-50" disabled>
+                        Bulk Sign Up
+                    </button>
+                </div>
+            `;
+            document.body.appendChild(container);
+            dom.bulkActionButton = document.getElementById('bulk-signup-btn');
+            updateBulkActionButton();
+        }
+
+        /** Updates the state of the bulk action button and floating container. */
+        function updateBulkActionButton() {
+            const checkboxes = document.querySelectorAll('#shifts-available .bulk-checkbox');
+            const selectedCount = Array.from(checkboxes).filter(cb => cb.checked).length;
+            
+            if (dom.bulkActionButton) {
+                dom.bulkActionButton.disabled = selectedCount === 0;
+            }
+            
+            const selectedCountSpan = document.getElementById('bulk-selected-count');
+            if (selectedCountSpan) selectedCountSpan.textContent = selectedCount;
+
+            const container = document.getElementById('bulk-action-container');
+            if (container) {
+                container.classList.toggle('translate-y-full', selectedCount === 0);
+            }
+            
+            if (dom.shiftsToConfirmCount) dom.shiftsToConfirmCount.textContent = selectedCount;
+        }
+        
+        /** Opens the bulk signup confirmation modal. */
+        function openBulkModal() {
+            const selectedCount = document.querySelectorAll('#shifts-available .bulk-checkbox:checked').length;
+            if (selectedCount > 0) {
+                dom.shiftsToConfirmCount.textContent = selectedCount;
+                dom.bulkModal.classList.remove('hidden');
+            }
+        }
+        
+        /** Closes the bulk signup confirmation modal. */
+        function closeBulkModal() {
+            dom.bulkModal.classList.add('hidden');
+        }
+
+        /** Executes the bulk signup operation. */
+        function performBulkSignup() {
+            closeBulkModal();
+            dom.loading.classList.remove('hidden');
+            
+            const selectedShiftIds = Array.from(document.querySelectorAll('#shifts-available .bulk-checkbox:checked'))
+                                         .map(cb => cb.dataset.shiftId);
+                                         
+            if (selectedShiftIds.length === 0) {
+                showMessage("No shifts were selected for bulk signup.", 'warning');
+                dom.loading.classList.add('hidden');
+                return;
+            }
+
+            google.script.run
+                .withSuccessHandler(handleBulkSignupResponse)
+                .withFailureHandler(handleServerError)
+                .handleBulkShiftSignup(selectedShiftIds, volunteerToken);
+        }
+
+        /** Handles the response from the bulk signup operation. */
+        function handleBulkSignupResponse(response) {
+            // response is either true (success) or a string (warning/error message)
+            if (response === true) {
+                showMessage(`Successfully signed up for all selected shifts. Refreshing data...`, 'success');
+            } else if (typeof response === 'string') {
+                 // This catches the specific warning message from the backend
+                showMessage(response, 'warning');
+            } else {
+                showMessage("Bulk signup finished with an unknown result. Refreshing data...", 'warning');
+            }
+            
+            // Clear checkboxes regardless of full success/partial success to reset state
+            document.querySelectorAll('#shifts-available .bulk-checkbox').forEach(cb => {
+                cb.checked = false;
+            });
+
+            // Re-fetch all data to ensure the UI reflects the latest Sheet state
+            google.script.run
+                .withSuccessHandler(loadShifts)
+                .withFailureHandler(handleServerError)
+                .getShiftsAndSignups(volunteerToken); 
+        }
+
+        
+        // --- SINGLE ACTION HANDLERS ---
+        
+        /** General handler for single signup/drop actions. */
+        function handleAction(action, shiftId) {
+            dom.loading.classList.remove('hidden');
+            
+            const successCallback = (result) => {
+                if (result === true) {
+                    showMessage(`Shift ${action} successful! Refreshing shifts...`, 'success');
+                } else if (typeof result === 'string') {
+                    // This handles server-side error strings like "Shift is already full"
+                    showMessage(`Shift ${action} failed: ${result}`, 'error');
+                } else {
+                    showMessage(`Shift ${action} failed due to an unknown conflict. Please re-check the list.`, 'error');
+                }
+                
+                // Re-fetch all data to ensure the UI reflects the latest Sheet state
+                google.script.run
+                    .withSuccessHandler(loadShifts)
+                    .withFailureHandler(handleServerError)
+                    .getShiftsAndSignups(volunteerToken);
+            };
+
+            if (action === 'signup') {
+                google.script.run
+                    .withSuccessHandler(successCallback)
+                    .withFailureHandler(handleServerError)
+                    .handleShiftSignup(shiftId, volunteerToken);
+            } else if (action === 'drop') {
+                google.script.run
+                    .withSuccessHandler(successCallback)
+                    .withFailureHandler(handleServerError)
+                    .handleShiftDrop(shiftId, volunteerToken);
+            }
+        }
+
+        /** Handles general server errors. */
+        function handleServerError(error) {
+            dom.loading.classList.add('hidden');
+            showMessage(`Server Error: ${error.message}. Please check your internet connection or contact support.`, 'error');
+            console.error("Client-side error from server call: " + error.message);
+        }
+        
+        // --- TAB CONTROL ---
+
+        /** Switches the visible tab between 'available' and 'signedup'. */
+        function showTab(tabName) {
+            CURRENT_TAB = tabName;
+            
+            // Reset classes for both tabs
+            dom.tabAvailable.classList.remove('border-brand-accent', 'text-brand-accent');
+            dom.tabAvailable.classList.add('border-transparent', 'text-brand-text/60');
+            dom.tabSignedup.classList.remove('border-brand-accent', 'text-brand-accent');
+            dom.tabSignedup.classList.add('border-transparent', 'text-brand-text/60');
+            
+            // Hide both content containers initially
+            dom.availableShifts.classList.add('hidden');
+            dom.signedUpShifts.classList.add('hidden');
+
+            if (tabName === 'available') {
+                dom.tabAvailable.classList.add('border-brand-accent', 'text-brand-accent');
+                dom.tabAvailable.classList.remove('border-transparent', 'text-brand-text/60');
+                dom.availableShifts.classList.remove('hidden');
+                dom.noAvailableShifts.classList.toggle('hidden', dom.availableShifts.children.length > 1); // Check for children excluding the 'no shifts' message
+            } else if (tabName === 'signedup') {
+                dom.tabSignedup.classList.add('border-brand-accent', 'text-brand-accent');
+                dom.tabSignedup.classList.remove('border-transparent', 'text-brand-text/60');
+                dom.signedUpShifts.classList.remove('hidden');
+            }
+            
+            // Re-render bulk action components (which handles visibility based on CURRENT_TAB)
+            renderBulkAction();
+        }
+
+
+        // --- Initialization ---
+
+        document.addEventListener('DOMContentLoaded', initializePortal);
+
+    </script>
+</body>
+</html>
