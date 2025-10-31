@@ -1,7 +1,22 @@
-// --- QA & DEBUGGING CONSTANT ---
-// Set to true to see detailed QC logs.
-// Set to false for production to reduce logging.
-const DEBUG = true;
+/**
+* -----------------------------------------------------------------
+* globals.js
+* Chevra Kadisha Shifts Scheduler
+* Global constants and variables
+* -----------------------------------------------------------------
+* globals.js
+ * Version: 1.0.1
+ * Last updated: 2025-10-30
+ * 
+ * CHANGELOG v1.0.1:
+ *   - Initial implementation of globals.js.
+ *   - Added logging and error handling.
+ *   - Added global constants and variables.
+ *   - Added error handling and logging.
+ *   - Added logging and error handling.
+ * globals.js
+ * -----------------------------------------------------------------
+ */
 
 /**
  * Configuration and Constants

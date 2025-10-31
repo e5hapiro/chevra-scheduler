@@ -1,5 +1,24 @@
-
-
+/**
+* -----------------------------------------------------------------
+* _webAppHandler.js
+* Chevra Kadisha Shifts Scheduler
+* Web App Handler
+* -----------------------------------------------------------------
+* _webAppHandler.js
+ * Version: 1.0.1
+ * Last updated: 2025-10-30
+ * 
+ * CHANGELOG v1.0.1:
+ *   - Initial implementation of getCurrentEventInfo_.
+ *   - Added logging and error handling.
+ *   - Added event information retrieval.
+ *   - Added shift information retrieval.
+ *   - Added email sending.
+ *   - Added error handling and logging.
+ *   - Added logging and error handling.
+ * Web App Handler
+ * -----------------------------------------------------------------
+ */
 
 /**
  * Retrieves the current event information (Deceased Name, Address/Location, Bio) 
@@ -7,6 +26,13 @@
  * @returns {object|null} The current event details.
  * @private
  */
+/**
+ * Retrieves the current event information (Deceased Name, Address/Location, Bio) 
+ * from the latest Form Responses 1 submission.
+ * @returns {object|null} The current event details.
+ * @private
+ */
+
 function getCurrentEventInfo_() {
   try {
     const ss = getSpreadsheet_();
@@ -50,6 +76,12 @@ function getCurrentEventInfo_() {
  * @returns {object|null} Object containing shift details, or null if not found.
  * @private
  */
+/**
+ * Retrieves shift information based on the shift ID from the master sheet.
+ * @param {string} shiftId The unique shift ID.
+ * @returns {object|null} Object containing shift details, or null if not found.
+ * @private
+ */
 function getShiftDetailsById_(shiftId) {
   try {
     const ss = getSpreadsheet_();
@@ -80,6 +112,14 @@ function getShiftDetailsById_(shiftId) {
 // --- EMAIL FUNCTIONALITY UPDATED ---
 // -------------------------------------------------------------------
 
+/**
+ * Sends a confirmation email to the volunteer.
+ * @param {string} recipientEmail - The volunteer's email address.
+ * @param {object} shift - Object containing shift details (eventName, eventLocation, eventDate, shiftTime).
+ * @param {string} actionType - 'Signup' or 'Drop'.
+ * @param {string} volunteerName - The name of the volunteer.
+ * @param {string} volunteerUrl - The volunteer's unique portal URL.
+ */
 /**
  * Sends a confirmation email to the volunteer.
  * @param {string} recipientEmail - The volunteer's email address.
@@ -136,12 +176,6 @@ function sendShiftEmail(recipientEmail, shift, actionType, volunteerName, volunt
  * -------------------------------------------------------------------
  */
 
-/**
- * Main function called by the client to fetch all shifts and the volunteer's signups.
- * This function now filters out shifts that are in the past or currently running.
- * * @param {string} token The volunteer's security token.
- * @returns {object} {allShifts: Array, signedUpShiftIds: Array, currentEvent: object} or {error: string}
- */
 function getShiftsAndSignups(token) {
   try {
     Logger.log("--- START getShiftsAndSignups (REAL DATA) ---");

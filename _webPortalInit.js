@@ -1,7 +1,28 @@
 /**
+* -----------------------------------------------------------------
+* _webPortalInit.js
+* Chevra Kadisha Shifts Scheduler
+* Web Portal Initialization
+* -----------------------------------------------------------------
+* _webPortalInit.js
+ * Version: 1.0.1
+ * Last updated: 2025-10-30
+ * 
+ * CHANGELOG v1.0.1:
+ *   - Initial implementation of doGet.
+ *   - Added logging and error handling.
+ *   - Added volunteer information retrieval.
+ *   - Added HTML template creation.
+ *   - Added error handling and logging.
+ *   - Added logging and error handling.
+ * Web Portal Initialization
+ * -----------------------------------------------------------------
+ */
+/**
  * MAIN ENTRY POINT for the Web App.
  * Handles the URL request and renders the HTML.
  */
+
 function doGet(e) {
   try {
     Logger.log("--- START doGet invocation ---"); 

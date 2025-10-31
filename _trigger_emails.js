@@ -1,3 +1,37 @@
+/**
+* -----------------------------------------------------------------
+* _trigger_emails.js
+* Chevra Kadisha Shifts Scheduler
+* Trigger Emails
+* -----------------------------------------------------------------
+* _trigger_emails.js
+ * Version: 1.0.1
+ * Last updated: 2025-10-30
+ * 
+ * CHANGELOG v1.0.1:
+ *   - Initial implementation of updateEventMap.
+ *   - Added logging and error handling.
+ *   - Added event, guest, and member data retrieval.
+ *   - Added mapping synchronization.
+ *   - Added email sending.
+ *   - Added error handling and logging.
+ *   - Added logging and error handling.
+ *
+ * Trigger Emails
+ * -----------------------------------------------------------------
+ */
+
+
+/**
+ * Updates the event map with the latest data from the events, guests, and members sheets.
+ * Sends emails to guests and members who have not yet received an email.
+ * @private
+ */
+/**
+ * Updates the event map with the latest data from the events, guests, and members sheets.
+ * Sends emails to guests and members who have not yet received an email.
+ * @private
+ */
 function updateEventMap() {
 
   // The master workbook
@@ -38,6 +72,12 @@ function updateEventMap() {
   mailMappings(events, guests, members, existingMapRows);
 
 }
+
+/**
+ * Retrieves the events data from the events sheet.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The events sheet.
+ * @returns {Array<object>} - The events data.
+ */
 function getEvents(sheet) {
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
@@ -76,6 +116,11 @@ function getEvents(sheet) {
   });
 }
 
+/**
+ * Retrieves the approved guests data from the guests sheet.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The guests sheet.
+ * @returns {Array<object>} - The approved guests data.
+ */
 function getApprovedGuests(sheet) {
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
@@ -120,6 +165,11 @@ function getApprovedGuests(sheet) {
     });
 }
 
+/**
+ * Retrieves the approved members data from the members sheet.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The members sheet.
+ * @returns {Array<object>} - The approved members data.
+ */
 function getApprovedMembers(sheet) {
   var data = sheet.getDataRange().getValues();
   var headers = data[0];
@@ -169,11 +219,25 @@ function getApprovedMembers(sheet) {
 }
 
 
+/**
+ * Retrieves the existing map rows from the map sheet.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} sheet - The map sheet.
+ * @returns {Array<object>} - The existing map rows.
+ */
 function getExistingMapRows(sheet) {
   var data = sheet.getDataRange().getValues();
   return data.slice(1); // skip headers
 }
 
+/**
+ * Synchronizes the mappings between events, guests, and members.
+ * @param {Array<object>} events - The events data.
+ * @param {Array<object>} guests - The guests data.
+ * @param {Array<object>} members - The members data.
+ * @param {Array<object>} existingRows - The existing map rows.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} mapSheet - The map sheet.
+ * @param {GoogleAppsScript.Spreadsheet.Sheet} archiveSheet - The archive map sheet.
+ */
 function syncMappings(events, guests, members, existingRows, mapSheet, archiveSheet) {
   // Build lookup for existing [source|eventToken|guest/memberToken] => emailSent
   var mapObj = {};
@@ -249,6 +313,13 @@ events.forEach(function(event) {
 }
 
 
+/**
+ * Sends emails to guests and members who have not yet received an email.
+ * @param {Array<object>} events - The events data.
+ * @param {Array<object>} guests - The guests data.
+ * @param {Array<object>} members - The members data.
+ * @param {Array<object>} existingMapRows - The existing map rows.
+ */
 function mailMappings(events, guests, members, existingMapRows) {
   const ss = getSpreadsheet_();
   const mapSheet = ss.getSheetByName(EVENT_MAP);
