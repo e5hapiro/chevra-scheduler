@@ -147,8 +147,8 @@ function getMemberInfoByToken_(token) {
 function getGuestInfoByToken_(token) {
   try {
     const ss = getSpreadsheet_();
-    const sheet = ss.getSheetByName(GUEST_LIST_SHEET);
-    if (!sheet) throw new Error(`Sheet not found: ${GUEST_LIST_SHEET}`);
+    const sheet = ss.getSheetByName(GUESTS_SHEET);
+    if (!sheet) throw new Error(`Sheet not found: ${GUESTS_SHEET}`);
 
     const data = sheet.getDataRange().getValues();
     const headers = data[0];
