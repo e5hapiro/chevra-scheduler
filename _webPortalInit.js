@@ -37,8 +37,9 @@ function doGet(e) {
 
     if (memberToken) {
       const info = getMemberInfoByToken_(memberToken);
+      logQCVars_('info', info);
       if (info) {
-        volunteerName = info.name;
+        volunteerName = info.firstName + " " + info.lastName;
         volunteerToken = memberToken;
         isMember = true;
         Logger.log(`Member authenticated: ${volunteerName} (Token: ${memberToken.substring(0, 5)}...)`);
@@ -59,13 +60,16 @@ function doGet(e) {
     }
 
     const template = HtmlService.createTemplateFromFile('index');
-    template.volunteerName = volunteerName;
-    template.volunteerToken = volunteerToken;
+    template.volunteerName = JSON.stringify(volunteerName);
+    template.volunteerToken = JSON.stringify(volunteerToken);
     template.isMember = isMember;
+
+    logQCVars_("template",template);
 
     return template.evaluate()
       .setTitle('Volunteer Portal')
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+
 
   } catch (error) {
     Logger.log("FATAL ERROR in doGet: " + error.toString());
@@ -87,16 +91,19 @@ function getMemberInfoByToken_(token) {
     if (!sheet) throw new Error(`Sheet not found: ${MEMBERS_SHEET}`);
 
     const data = sheet.getDataRange().getValues();
+
     const headers = data[0];
 
     // Map header names to indices
     var idx = {};
     headers.forEach(function(h, i) { idx[h] = i; });
+    
 
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
+
       if (row[idx['Token']] === token) {
-        return {
+        const info = {
           timestamp: row[idx['Timestamp']],
           email: row[idx['Email Address']],
           firstName: row[idx['First Name']],
@@ -128,6 +135,8 @@ function getMemberInfoByToken_(token) {
           approvals: row[idx['Approvals']],
           rowIndex: i + 1 // Sheet row (1-based)
         };
+        logQCVars_('getMemberInfoByToken_', info);
+        return info;
       }
     }
     return null;
@@ -137,13 +146,13 @@ function getMemberInfoByToken_(token) {
   }
 }
 
-
 /**
  * Retrieves guest information based on the token.
  * @param {string} token The unique guest token.
  * @returns {object|null} Object containing name, email, token, URL, and rowIndex.
  * @private
  */
+
 function getGuestInfoByToken_(token) {
   try {
     const ss = getSpreadsheet_();
@@ -160,7 +169,7 @@ function getGuestInfoByToken_(token) {
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
       if (row[idx['Token']] === token) {
-        return {
+        const info = {
           timestamp: row[idx['Timestamp']],
           email: row[idx['Email Address']],
           firstName: row[idx['First Name']],
@@ -188,6 +197,8 @@ function getGuestInfoByToken_(token) {
           approvals: row[idx['Approvals']],
           rowIndex: i + 1 // Sheet row (1-based)
         };
+        logQCVars_('getGuestInfoByToken_', info);
+        return info;
       }
     }
     return null;
@@ -196,4 +207,3 @@ function getGuestInfoByToken_(token) {
     throw e;
   }
 }
-

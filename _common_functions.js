@@ -182,6 +182,48 @@ function getGuestInfoByToken_(token) {
   }
 }
 
+
+/**
+ * Quality Control Logger: Logs a set of variables with a context message.
+ * ONLY logs if the global constant DEBUG is set to true.
+ *
+ * @param {string} context - A message describing where in the code this is being called.
+ * @param {Object} varsObject - An object where keys are variable names and values are the variables.
+ */
+function logQCVars_(context, varsObject) {
+  // --- QA CHECK ---
+  if (typeof DEBUG === 'undefined' || DEBUG === false) {
+    return;
+  }
+  // --- END QA CHECK ---
+
+  Logger.log(`--- QC LOG: ${context} ---`);
+  
+  if (typeof varsObject !== 'object' || varsObject === null) {
+    Logger.log(`Invalid varsObject: ${varsObject}`);
+    Logger.log(`--- END QC LOG: ${context} ---`);
+    return;
+  }
+
+  for (const key in varsObject) {
+    if (Object.prototype.hasOwnProperty.call(varsObject, key)) {
+      const value = varsObject[key];
+      
+      if (typeof value === 'object' && value !== null) {
+        try {
+          Logger.log(`[${key}]: ${JSON.stringify(value)}`);
+        } catch (e) {
+          Logger.log(`[${key}] (Object): ${value.toString()}`);
+        }
+      } else {
+        Logger.log(`[${key}]: ${value}`);
+      }
+    }
+  }
+  Logger.log(`--- END QC LOG: ${context} ---`);
+}
+
+
 /**
  * Returns a formatted English-language string for the supplied Date object.
  * Throws an error if input is not a valid Date.

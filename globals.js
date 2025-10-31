@@ -24,6 +24,7 @@
  */
 
 // --- CONFIGURATION ---
+const DEBUG = true;
 
 // Hardcoded confidential addresses for the two potential preparation sites.
 const ADDRESS_CONFIG = {

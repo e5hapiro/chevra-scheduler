@@ -123,6 +123,14 @@
   </main>
 
   <script>
+
+    const volunteerName = <?= volunteerName ?>;
+    const volunteerToken = <?= volunteerToken ?>;
+    const isMember = <?= isMember ?>;
+
+    console.log("script volunteerName:", volunteerName);
+    console.log("script volunteerToken:", volunteerToken);
+    
     // Helper to get URL parameter by name
     function getParameterByName(name) {
       const url = new URL(window.location.href);
@@ -160,8 +168,6 @@
     let SIGNEDUPSHIFTIDS = [];
     let CURRENTEVENTINFO = null;
     let CURRENTTAB = "available";
-    let volunteerName = null;
-    let volunteerToken = null;
 
     // Custom confirm modal callback
     let confirmActionCallback = null;
@@ -429,21 +435,10 @@
       console.log("Data loaded successfully.");
     }
 
-    // Initialize portal on DOM ready
     function initializePortal() {
       initConfirmModal();
 
-      // Determine volunteerToken based on URL parameters m= or g=
-      const memberParam = getParameterByName("m");
-      const guestParam = getParameterByName("g");
-
-      if (memberParam) {
-        volunteerToken = memberParam;
-        volunteerName = "Member"; // Optional: fetch real name from server if possible
-      } else if (guestParam) {
-        volunteerToken = guestParam;
-        volunteerName = "Guest"; // Optional: fetch real name from server if possible
-      } else {
+      if (!volunteerToken) {
         dom.loading.innerHTML = `
           <h2 class="text-3xl text-brand-text font-headline">Access Denied</h2>
           <p class="mt-4 text-lg">Your personalized link is missing a security token. Please use the unique link provided in your email.</p>
@@ -453,7 +448,6 @@
 
       dom.welcomeMessage.textContent = `Hello, ${volunteerName}!`;
 
-      // Call backend to get shifts and signups
       google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken);
     }
 
