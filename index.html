@@ -387,7 +387,7 @@
         showMessage("Bulk signup finished with an unknown result. Refreshing data...", "warning");
       }
       document.querySelectorAll(".bulk-checkbox").forEach(cb => cb.checked = false);
-      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken);
+      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
     }
 
     // Single action handler for signup or drop
@@ -401,7 +401,7 @@
         } else {
           showMessage("Shift action failed due to an unknown conflict. Please re-check the list.", "error");
         }
-        google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken);
+        google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
       };
       if (action === "signup") {
         google.script.run.withSuccessHandler(successCallback).withFailureHandler(handleServerError).handleShiftSignup(shiftId, volunteerToken);
@@ -448,7 +448,7 @@
 
       dom.welcomeMessage.textContent = `Hello, ${volunteerName}!`;
 
-      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken);
+      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
     }
 
     document.addEventListener("DOMContentLoaded", initializePortal);

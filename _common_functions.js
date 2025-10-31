@@ -69,6 +69,9 @@ function isFormUpdated(eventData) {
 }
 
 function getMemberInfoByToken_(token) {
+
+  console.log("Getting getMemberInfoByToken_ " + token);
+  
   try {
     const ss = getSpreadsheet_();
     const sheet = ss.getSheetByName(MEMBERS_SHEET);
@@ -81,9 +84,11 @@ function getMemberInfoByToken_(token) {
     var idx = {};
     headers.forEach(function(h, i) { idx[h] = i; });
 
+
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (row[idx['Token']] === token) {
+
+      if (normalizeToken(row[idx['Token']]) === normalizeToken(token)) {
         const info = {
           timestamp: row[idx['Timestamp']],
           email: row[idx['Email Address']],
@@ -120,6 +125,7 @@ function getMemberInfoByToken_(token) {
         return info;
       }
     }
+    console.log("Did not find a member with that token");
     return null;
   } catch (e) {
     Logger.log("Error in getMemberInfoByToken_: " + e.toString());
@@ -128,6 +134,7 @@ function getMemberInfoByToken_(token) {
 }
 
 function getGuestInfoByToken_(token) {
+  console.log("Getting getGuestInfoByToken_ "+token);
   try {
     const ss = getSpreadsheet_();
     const sheet = ss.getSheetByName(GUESTS_SHEET);
@@ -142,7 +149,7 @@ function getGuestInfoByToken_(token) {
 
     for (let i = 1; i < data.length; i++) {
       const row = data[i];
-      if (row[idx['Token']] === token) {
+      if (normalizeToken(row[idx['Token']]) === normalizeToken(token)) {
         const info = {
           timestamp: row[idx['Timestamp']],
           email: row[idx['Email Address']],
@@ -175,6 +182,7 @@ function getGuestInfoByToken_(token) {
         return info;
       }
     }
+    console.log("Did not find a guest with that token");
     return null;
   } catch (e) {
     Logger.log("Error in getGuestInfoByToken_: " + e.toString());
@@ -197,11 +205,11 @@ function logQCVars_(context, varsObject) {
   }
   // --- END QA CHECK ---
 
-  Logger.log(`--- QC LOG: ${context} ---`);
+  console.log(`--- QC LOG: ${context} ---`);
   
   if (typeof varsObject !== 'object' || varsObject === null) {
-    Logger.log(`Invalid varsObject: ${varsObject}`);
-    Logger.log(`--- END QC LOG: ${context} ---`);
+    console.log(`Invalid varsObject: ${varsObject}`);
+    console.log(`--- END QC LOG: ${context} ---`);
     return;
   }
 
@@ -211,16 +219,16 @@ function logQCVars_(context, varsObject) {
       
       if (typeof value === 'object' && value !== null) {
         try {
-          Logger.log(`[${key}]: ${JSON.stringify(value)}`);
+          console.log(`[${key}]: ${JSON.stringify(value)}`);
         } catch (e) {
-          Logger.log(`[${key}] (Object): ${value.toString()}`);
+          console.log(`[${key}] (Object): ${value.toString()}`);
         }
       } else {
-        Logger.log(`[${key}]: ${value}`);
+        console.log(`[${key}]: ${value}`);
       }
     }
   }
-  Logger.log(`--- END QC LOG: ${context} ---`);
+  console.log(`--- END QC LOG: ${context} ---`);
 }
 
 
@@ -245,3 +253,30 @@ function formattedDateAndTime(inputDate) {
 
   return `${dateStr} at ${timeStr}`;
 }
+
+
+/**
+ * Aggressively cleans a string for robust token comparisons.
+ *  - Removes all whitespace (space, tabs, newlines)
+ *  - Removes invisible and Unicode control characters
+ *  - Removes leading/trailing quotes, if present
+ *  - Converts to lowercase (optional, for case-insensitive matching)
+ *
+ * @param {string} str
+ * @param {boolean} [toLower] Should convert to lowercase? (Default false)
+ * @returns {string}
+ */
+function normalizeToken(str, toLower) {
+  if (typeof str !== 'string') str = String(str);
+
+  // Remove leading/trailing whitespace, quotes, ALL whitespace, & invisible characters
+  let cleaned = str
+    .replace(/^["']+|["']+$/g, '')        // Remove leading/trailing quotes if present
+    .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width/unicode invisible chars
+    .replace(/\s+/g, '')                   // Remove ALL whitespace (space, tabs, newlines)
+    .replace(/[\r\n\t]/g, '');             // Remove specific control chars
+
+  if (toLower) cleaned = cleaned.toLowerCase();
+  return cleaned;
+}
+

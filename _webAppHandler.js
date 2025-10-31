@@ -176,10 +176,20 @@ function sendShiftEmail(recipientEmail, shift, actionType, volunteerName, volunt
  * -------------------------------------------------------------------
  */
 
-function getShiftsAndSignups(token) {
+function getShiftsAndSignups(token, isMember) {
+
+  function testTokenLookup(token) {
+    var result = getMemberInfoByToken_(token);
+    console.log(result);
+  }
+
+  testTokenLookup(token);
+
   try {
-    Logger.log("--- START getShiftsAndSignups (REAL DATA) ---");
-    const volunteerInfo = getVolunteerInfoByToken_(token);
+    Logger.log("--- START getShiftsAndSignups (token" + token + ") ---");
+    const volunteerInfo = isMember
+      ? getMemberInfoByToken_(token)
+      : getGuestInfoByToken_(token);
 
     if (!volunteerInfo) {
       return { error: "Invalid or expired authorization token." };
@@ -197,58 +207,46 @@ function getShiftsAndSignups(token) {
     // Process shift rows (starting from 1 to skip headers)
     for (let i = 1; i < shiftData.length; i++) {
       const row = shiftData[i];
-      
       const shiftStartTimeEpoch = Number(row[SHIFT_START_EPOCH_COL]);
-      
-      // --- SERVER-SIDE FILTER: ONLY INCLUDE FUTURE SHIFTS ---
-      // Check if the shift has already started (Epoch time <= current time)
-      if (shiftStartTimeEpoch <= now) {
-          continue; 
-      }
-      // ------------------------------------------------------
-      
-      // Explicitly cast data types to prevent serialization errors
+      if (shiftStartTimeEpoch <= now) continue;
+
       allShifts.push({
-        id: String(row[SHIFT_ID_COL]), // Must be string
-        eventName: String(row[SHIFT_EVENT_NAME_COL]), // Deceased Name
-        location: String(row[SHIFT_SHIFT_LOCATION_COL]), 
+        id: String(row[SHIFT_ID_COL]),
+        eventName: String(row[SHIFT_EVENT_NAME_COL]),
+        location: String(row[SHIFT_SHIFT_LOCATION_COL]),
         eventDate: String(row[SHIFT_EVENT_DATE_COL]),
         shiftTime: String(row[SHIFT_SHIFT_TIME_COL]),
-        maxVolunteers: Number(row[SHIFT_MAX_VOL_COL]), // Must be number
-        currentVolunteers: Number(row[SHIFT_CUR_VOL_COL]), // Must be number
-        startTimeEpoch: shiftStartTimeEpoch // Must be number (epoch time)
+        maxVolunteers: Number(row[SHIFT_MAX_VOL_COL]),
+        currentVolunteers: Number(row[SHIFT_CUR_VOL_COL]),
+        startTimeEpoch: shiftStartTimeEpoch
       });
     }
 
     // 2. Get Volunteer Signups Data
     const signupSheet = ss.getSheetByName(SIGNUPS_SHEET);
     if (!signupSheet) throw new Error(`Sheet not found: ${SIGNUPS_SHEET}`);
-
     const signupData = signupSheet.getDataRange().getValues();
     const signedUpShiftIds = [];
 
-    // Process signup rows (starting from 1 to skip headers)
     for (let i = 1; i < signupData.length; i++) {
       const row = signupData[i];
       if (row[SIGNUP_TOKEN_COL] === token) {
-        // Ensure Shift ID is a string
         signedUpShiftIds.push(String(row[SIGNUP_SHIFT_ID_COL]));
       }
     }
 
-    Logger.log(`Found ${allShifts.length} FUTURE shifts and ${signedUpShiftIds.length} signups for ${volunteerInfo.name}.`);
-
+    Logger.log(`Found ${allShifts.length} FUTURE shifts and ${signedUpShiftIds.length} signups for ${volunteerInfo.firstName} ${volunteerInfo.lastName}.`);
     return {
       allShifts: allShifts,
       signedUpShiftIds: signedUpShiftIds,
-      currentEvent: getCurrentEventInfo_() // <-- This now includes the full address
+      currentEvent: getCurrentEventInfo_()
     };
-
   } catch (e) {
     Logger.log("EXECUTION ERROR in getShiftsAndSignups: " + e.toString());
     return { error: "Server Error: Could not load data. Check script logs for details. Error: " + e.message };
   }
 }
+
 
 /**
  * Handles the logic for a volunteer signing up for a shift.
@@ -256,45 +254,39 @@ function getShiftsAndSignups(token) {
  * @param {string} token The volunteer's security token.
  * @returns {boolean|string} True on success, or an error string.
  */
-function handleShiftSignup(shiftId, token) {
+function handleShiftSignup(shiftId, token, isMember) {
   const LOCK_ID = "SHIFT_LOCK_" + shiftId;
   const lock = LockService.getScriptLock();
-  
-  // Wait up to 30 seconds for the lock
-  lock.waitLock(30000); 
+  lock.waitLock(30000);
 
   try {
-    const volunteerInfo = getVolunteerInfoByToken_(token);
+    const volunteerInfo = isMember
+      ? getMemberInfoByToken_(token)
+      : getGuestInfoByToken_(token);
     if (!volunteerInfo) {
-        Logger.log("handleShiftSignup failed: Invalid token.");
-        return "Invalid or expired authorization token.";
+      Logger.log("handleShiftSignup failed: Invalid token.");
+      return "Invalid or expired authorization token.";
     }
 
     const ss = getSpreadsheet_();
     const shiftSheet = ss.getSheetByName(SHIFTS_MASTER_SHEET);
     const signupSheet = ss.getSheetByName(SIGNUPS_SHEET);
-    
-    // --- 1. Check Capacity and Existing Signup ---
-    const shiftData = shiftSheet.getDataRange().getValues();
-    let shiftRowIndex = -1;
-    let shiftRow = null;
 
+    const shiftData = shiftSheet.getDataRange().getValues();
+    let shiftRowIndex = -1, shiftRow = null;
     for (let i = 1; i < shiftData.length; i++) {
       if (String(shiftData[i][SHIFT_ID_COL]) === shiftId) {
-        shiftRowIndex = i + 1; // 1-based index
+        shiftRowIndex = i + 1;
         shiftRow = shiftData[i];
         break;
       }
     }
-
     if (!shiftRow) {
       Logger.log(`handleShiftSignup failed: Shift ID ${shiftId} not found.`);
       return "Shift ID not found.";
     }
-
     const currentVolunteers = Number(shiftRow[SHIFT_CUR_VOL_COL]);
     const maxVolunteers = Number(shiftRow[SHIFT_MAX_VOL_COL]);
-
     if (currentVolunteers >= maxVolunteers) {
       Logger.log(`handleShiftSignup failed: Shift ${shiftId} is full (Max: ${maxVolunteers}).`);
       return "Shift is already full.";
@@ -304,46 +296,33 @@ function handleShiftSignup(shiftId, token) {
     for (let i = 1; i < signupData.length; i++) {
       if (String(signupData[i][SIGNUP_SHIFT_ID_COL]) === shiftId && signupData[i][SIGNUP_TOKEN_COL] === token) {
         Logger.log(`handleShiftSignup failed: Volunteer already signed up for ${shiftId}.`);
-        return "You are already signed up for this shift."; 
+        return "You are already signed up for this shift.";
       }
     }
 
-    // --- 2. Record Signup ---
-    // Append new row to Volunteer Signups sheet
     signupSheet.appendRow([
       new Date(),       // Timestamp
       shiftId,          // Shift ID
       token,            // Volunteer Token
-      volunteerInfo.name// Volunteer Name
+      volunteerInfo.firstName + " " + volunteerInfo.lastName // Volunteer Name
     ]);
 
-    // --- 3. Update Shift Capacity ---
-    // Increment the Current Volunteers count (Column F, index 5)
     shiftSheet.getRange(shiftRowIndex, SHIFT_CUR_VOL_COL + 1).setValue(currentVolunteers + 1);
 
-    Logger.log(`Successful signup: ${volunteerInfo.name} for shift ${shiftId}.`);
-    
-    // -------------------------------------------------------------------
-    // --- EMAIL CONFIRMATION ---
-    // -------------------------------------------------------------------
+    Logger.log(`Successful signup: ${volunteerInfo.firstName} ${volunteerInfo.lastName} for shift ${shiftId}.`);
     const shiftDetails = getShiftDetailsById_(shiftId);
     if (shiftDetails) {
-        // Passing volunteerInfo.url to the email function
-        sendShiftEmail(volunteerInfo.email, shiftDetails, 'Signup', volunteerInfo.name, volunteerInfo.url);
+        sendShiftEmail(volunteerInfo.email, shiftDetails, 'Signup', volunteerInfo.firstName + " " + volunteerInfo.lastName, volunteerInfo.url);
     }
-    // -------------------------------------------------------------------
-
     return true;
-
   } catch (e) {
-    // *** Crucial Logging ***
     Logger.log("EXECUTION ERROR in handleShiftSignup: " + e.toString());
     return "An unexpected server error occurred during signup.";
   } finally {
-    // Must ensure lock is released
     lock.releaseLock();
   }
 }
+
 
 /**
  * Handles the logic for a volunteer dropping a shift.
@@ -351,92 +330,68 @@ function handleShiftSignup(shiftId, token) {
  * @param {string} token The volunteer's security token.
  * @returns {boolean|string} True on success, or an error string.
  */
-function handleShiftDrop(shiftId, token) {
+function handleShiftDrop(shiftId, token, isMember) {
   const LOCK_ID = "SHIFT_LOCK_" + shiftId;
   const lock = LockService.getScriptLock();
-  
-  // Wait up to 30 seconds for the lock
-  lock.waitLock(30000); 
+  lock.waitLock(30000);
 
   try {
-    const volunteerInfo = getVolunteerInfoByToken_(token);
+    const volunteerInfo = isMember
+      ? getMemberInfoByToken_(token)
+      : getGuestInfoByToken_(token);
     if (!volunteerInfo) {
-        Logger.log("handleShiftDrop failed: Invalid token.");
-        return "Invalid or expired authorization token.";
+      Logger.log("handleShiftDrop failed: Invalid token.");
+      return "Invalid or expired authorization token.";
     }
-
     const ss = getSpreadsheet_();
     const shiftSheet = ss.getSheetByName(SHIFTS_MASTER_SHEET);
     const signupSheet = ss.getSheetByName(SIGNUPS_SHEET);
 
-    // --- 1. Find and Delete Signup Row ---
     const signupData = signupSheet.getDataRange().getValues();
     let signupRowIndex = -1;
-    
-    // Need shift details *before* deleting the signup row for the email
-    const shiftDetails = getShiftDetailsById_(shiftId); 
+    const shiftDetails = getShiftDetailsById_(shiftId);
 
     for (let i = 1; i < signupData.length; i++) {
-      // Must cast shift ID to string for reliable comparison
       if (String(signupData[i][SIGNUP_SHIFT_ID_COL]) === shiftId && signupData[i][SIGNUP_TOKEN_COL] === token) {
-        signupRowIndex = i + 1; // 1-based index
+        signupRowIndex = i + 1;
         break;
       }
     }
-
     if (signupRowIndex === -1) {
-      Logger.log(`handleShiftDrop failed: Signup not found for ${volunteerInfo.name} on shift ${shiftId}.`);
-      return "You were not signed up for this shift."; 
+      Logger.log(`handleShiftDrop failed: Signup not found for ${volunteerInfo.firstName} ${volunteerInfo.lastName} on shift ${shiftId}.`);
+      return "You were not signed up for this shift.";
     }
-    
     signupSheet.deleteRow(signupRowIndex);
 
-    // --- 2. Update Shift Capacity ---
     const shiftData = shiftSheet.getDataRange().getValues();
-    let shiftRowIndex = -1;
-    let currentVolunteers = 0;
-
+    let shiftRowIndex = -1, currentVolunteers = 0;
     for (let i = 1; i < shiftData.length; i++) {
-      // Must cast shift ID to string for reliable comparison
       if (String(shiftData[i][SHIFT_ID_COL]) === shiftId) {
-        shiftRowIndex = i + 1; // 1-based index
+        shiftRowIndex = i + 1;
         currentVolunteers = Number(shiftData[i][SHIFT_CUR_VOL_COL]);
         break;
       }
     }
-
     if (shiftRowIndex === -1) {
       Logger.log(`handleShiftDrop warning: Shift ID ${shiftId} not found in master sheet, but signup was deleted.`);
-      // Still return true because the signup record was successfully removed.
-      return true; 
+      return true;
     }
-
-    // Decrement the Current Volunteers count (Column F, index 5)
     const newCount = Math.max(0, currentVolunteers - 1);
     shiftSheet.getRange(shiftRowIndex, SHIFT_CUR_VOL_COL + 1).setValue(newCount);
 
-    Logger.log(`Successful drop: ${volunteerInfo.name} from shift ${shiftId}. New count: ${newCount}`);
-    
-    // -------------------------------------------------------------------
-    // --- EMAIL CONFIRMATION ---
-    // -------------------------------------------------------------------
+    Logger.log(`Successful drop: ${volunteerInfo.firstName} ${volunteerInfo.lastName} from shift ${shiftId}. New count: ${newCount}`);
     if (shiftDetails) {
-        // Passing volunteerInfo.url to the email function
-        sendShiftEmail(volunteerInfo.email, shiftDetails, 'Drop', volunteerInfo.name, volunteerInfo.url);
+        sendShiftEmail(volunteerInfo.email, shiftDetails, 'Drop', volunteerInfo.firstName + " " + volunteerInfo.lastName, volunteerInfo.url);
     }
-    // -------------------------------------------------------------------
-
     return true;
-
   } catch (e) {
-    // *** Crucial Logging ***
     Logger.log("EXECUTION ERROR in handleShiftDrop: " + e.toString());
     return "An unexpected server error occurred during shift drop.";
   } finally {
-    // Must ensure lock is released
     lock.releaseLock();
   }
 }
+
 
 /**
  * Handles the logic for a volunteer signing up for multiple shifts in a batch.
@@ -445,50 +400,39 @@ function handleShiftDrop(shiftId, token) {
  * @param {string} token - The volunteer's security token.
  * @returns {boolean|string} True on success for ALL shifts, or a string error message if any fail.
  */
-function handleBulkShiftSignup(shiftIds, token) {
+function handleBulkShiftSignup(shiftIds, token, isMember) {
   Logger.log(`Starting bulk signup for ${shiftIds.length} shifts.`);
-  
   const failedShifts = [];
-  
   if (!token) {
-      Logger.log("handleBulkShiftSignup failed: Invalid token.");
-      return "Authentication error: Invalid volunteer token.";
+    Logger.log("handleBulkShiftSignup failed: Invalid token.");
+    return "Authentication error: Invalid volunteer token.";
   }
-  
   let successCount = 0;
-  
-  // Iterate through the list of selected shift IDs
   for (const shiftId of shiftIds) {
-    // Call the existing single sign-up function. 
-    // It returns true on success, or an error string on failure.
-    const result = handleShiftSignup(shiftId, token);
-    
+    // Note the addition of isMember below:
+    const result = handleShiftSignup(shiftId, token, isMember);
     if (result === true) {
       successCount++;
     } else {
-      // Collect error messages/failed IDs
       failedShifts.push(shiftId);
     }
   }
-  
   if (failedShifts.length === 0) {
-      Logger.log(`Bulk signup successful for all ${shiftIds.length} shifts.`);
-      return true; 
+    Logger.log(`Bulk signup successful for all ${shiftIds.length} shifts.`);
+    return true;
   }
-  
   if (successCount > 0) {
-      Logger.log(`Bulk signup completed with ${failedShifts.length} failures out of ${shiftIds.length}.`);
-      return `Successfully signed up for ${successCount} shifts. ${failedShifts.length} shifts failed (e.g., full capacity or already signed up).`;
+    Logger.log(`Bulk signup completed with ${failedShifts.length} failures out of ${shiftIds.length}.`);
+    return `Successfully signed up for ${successCount} shifts. ${failedShifts.length} shifts failed (e.g., full capacity or already signed up).`;
   }
-
   Logger.log(`Bulk signup failed for all ${shiftIds.length} shifts.`);
   return `Warning: Sign up failed for all ${shiftIds.length} selected shifts. Please check the 'Available Shifts' tab for details.`;
 }
 
+
 /**
  * Generates unique tokens and personalized URLs for volunteers who don't have them.
  * This function should be run manually once by the admin.
- */
 function generateVolunteerTokens() {
   try {
     const ss = getSpreadsheet_();
@@ -533,3 +477,5 @@ function generateVolunteerTokens() {
     Logger.log("FATAL ERROR in generateVolunteerTokens: " + e.toString());
   }
 }
+ */
+
