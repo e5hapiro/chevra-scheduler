@@ -24,7 +24,7 @@ const SHIFTS_MASTER_SHEET = 'Shifts Master';
 const SIGNUPS_SHEET = 'Volunteer Signups';
 const GUESTS_SHEET = 'Guests';
 const MEMBERS_SHEET = 'Members';
-const GUEST_EVENT_MAP = 'Guest Event Map';
+const EVENT_MAP = 'Event Map';
 const ARCHIVE_EVENT_MAP = 'Archive Event Map';
 
 // Column Indices (0-based) for SHIFTS_MASTER_SHEET
