@@ -280,3 +280,33 @@ function normalizeToken(str, toLower) {
   return cleaned;
 }
 
+
+/**
+ * Safely opens the spreadsheet.
+ * @returns {GoogleAppsScript.Spreadsheet.Spreadsheet} The spreadsheet object.
+ * @private
+ */
+function getSpreadsheet_() {
+  if (SPREADSHEET_ID === 'YOUR_GOOGLE_SHEET_ID_HERE') {
+    throw new Error("Configuration Error: Please set the SPREADSHEET_ID constant.");
+  }
+  return SpreadsheetApp.openById(SPREADSHEET_ID);
+}
+
+/**
+ * Looks up the confidential physical address based on the location name (e.g., 'Site A').
+ * This function retrieves the secret address stored in ADDRESS_CONFIG.
+ * @param {string} locationName The short name (e.g., 'Site A' or 'Site B').
+ * @returns {string} The full physical address or a helpful message.
+ * @private
+ */
+function getAddressFromLocationName_(locationName) {
+  // Use the locationName to look up the confidential address.
+  if (ADDRESS_CONFIG[locationName]) {
+    return ADDRESS_CONFIG[locationName];
+  }
+  
+  // If the location is not configured (e.g., 'Virtual Shift', 'Other'), return the name.
+  return locationName; 
+}
+
