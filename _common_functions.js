@@ -19,6 +19,47 @@
  */
 
 /**
+ * Triggers the updates for the shifts and event map.
+ * Depends on the script properties being set.
+ * @returns {void}
+ */
+
+function triggeredFunction() {
+  bckLib.updateShiftsAndEventMap();
+}
+
+
+/**
+ * Sets script properties
+ * Needs to be run a single time 
+ * @returns {void}
+ */
+function setConfigProperties() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  
+  scriptProperties.setProperty('DEBUG', 'true');
+  
+  const addressConfig = {
+    'Crist Mortuary': '3395 Penrose Pl, Boulder, CO 80301',
+    'Greenwood & Myers Mortuary': '2969 Baseline Road, Boulder, CO 80303'
+  };
+  scriptProperties.setProperty('ADDRESS_CONFIG', JSON.stringify(addressConfig));  
+  
+  const sheetInputs = {
+    SPREADSHEET_ID: '1cCouQRRpEN0nUhN45m14_z3oaONo7HHgwyfYDkcu2mw',
+    EVENT_FORM_RESPONSES: 'Form Responses 1',
+    SHIFTS_MASTER_SHEET: 'Shifts Master',
+    GUESTS_SHEET: 'Guests',
+    MEMBERS_SHEET: 'Members',
+    EVENT_MAP: 'Event Map',
+    ARCHIVE_EVENT_MAP: 'Archive Event Map',
+    TOKEN_COLUMN_NUMBER: 12
+  };
+  scriptProperties.setProperty('SHEET_INPUTS', JSON.stringify(sheetInputs));
+}
+
+
+/**
  * Adds a unique token value (UUID) to the specified column in the row that triggered the event.
  * Only works if columnNumber is provided.
  * Logs success or detailed error for debugging.
