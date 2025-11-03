@@ -45,6 +45,10 @@ function setConfigProperties() {
   };
   scriptProperties.setProperty('ADDRESS_CONFIG', JSON.stringify(addressConfig));  
   
+  // Generate URL for email
+  const webAppUrl = ScriptApp.getService().getUrl(); 
+  scriptProperties.setProperty('SCRIPT_URL', webAppUrl);  
+
   const sheetInputs = {
     SPREADSHEET_ID: '1cCouQRRpEN0nUhN45m14_z3oaONo7HHgwyfYDkcu2mw',
     EVENT_FORM_RESPONSES: 'Form Responses 1',
