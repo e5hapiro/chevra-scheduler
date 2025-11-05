@@ -49,6 +49,8 @@ function setConfigProperties() {
   scriptProperties.setProperty('SCRIPT_URL', webAppUrl);  
   ss = getActiveSpreadsheetId();
 
+
+
   const sheetInputs = {
     DEBUG: 'true',
     ADDRESS_CONFIG: addressConfig,
