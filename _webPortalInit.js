@@ -31,27 +31,37 @@ function doGet(e) {
     const memberToken = e.parameter.m || null;
     const guestToken = e.parameter.g || null;
 
-    let volunteerName = "Volunteer";
-    let volunteerToken = null;
-    let isMember = false;
-
     if (memberToken) {
-      const info = getMemberInfoByToken_(memberToken);
-      logQCVars_('info', info);
+      const info = getMemberInfoByToken(setConfigProperties(), memberToken);
+      logQCVars_('memberToken info', info);
       if (info) {
-        volunteerName = info.firstName + " " + info.lastName;
-        volunteerToken = memberToken;
-        isMember = true;
-        Logger.log(`Member authenticated: ${volunteerName} (Token: ${memberToken.substring(0, 5)}...)`);
+
+        volunteerData = {
+          name: info.firstName + " " + info.lastName,
+          token: memberToken,
+          isMember: true,
+          events: info.events
+          // Add more attributes as needed
+        };
+
+        Logger.log(`Member authenticated: ${volunteerData.name} (Token: ${volunteerData.token.substring(0, 5)}...)`);
       } else {
         Logger.log("Member token found but failed validation.");
       }
     } else if (guestToken) {
-      const info = getGuestInfoByToken_(guestToken);
+      const info = getGuestInfoByToken(setConfigProperties(), guestToken);
+      logQCVars_('guestToken info', info);
       if (info) {
-        volunteerName = info.name;
-        volunteerToken = guestToken;
-        Logger.log(`Guest authenticated: ${volunteerName} (Token: ${guestToken.substring(0, 5)}...)`);
+
+        volunteerData = {
+          name: info.firstName + " " + info.lastName,
+          token: guestToken,
+          isMember: false,
+          events: info.events
+          // Add more attributes as needed
+        };
+
+        Logger.log(`Guest authenticated: ${volunteerData.name} (Token: ${volunteerData.token.substring(0, 5)}...)`);
       } else {
         Logger.log("Guest token found but failed validation.");
       }
@@ -60,11 +70,9 @@ function doGet(e) {
     }
 
     const template = HtmlService.createTemplateFromFile('index');
-    template.volunteerName = JSON.stringify(volunteerName);
-    template.volunteerToken = JSON.stringify(volunteerToken);
-    template.isMember = isMember;
 
-    logQCVars_("template",template);
+    template.data = JSON.stringify(volunteerData);  // Pass as JSON string
+    //logQCVars_("template",template);
 
     return template.evaluate()
       .setTitle('Volunteer Portal')

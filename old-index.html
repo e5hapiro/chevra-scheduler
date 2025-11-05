@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Boulder Chevra Kadisha Volunteer Portal</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            "brand-background": "#F9F4ED",
+            "brand-text": "#3D4066",
+            "brand-accent": "#0072BC",
+            "brand-signup": "#0072BC",
+            "brand-full": "#F05252",
+            "brand-cancel": "#A63A3A",
+            "brand-info-bg": "#EAE0D6",
+          },
+          fontFamily: {
+            headline: ["Playfair Display", "serif"],
+            text: ["Karla", "sans-serif"],
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    body {
+      background-color: #F9F4ED;
+      color: #3D4066;
+      font-family: 'Karla', sans-serif;
+      min-height: 100vh;
+    }
+    .font-headline {
+      font-family: 'Playfair Display', serif;
+    }
+    .hidden-until-load {
+      display: none;
+    }
+  </style>
+</head>
+
+<body class="font-text antialiased">
+  <!-- Loading overlay -->
+  <div id="loading" class="fixed inset-0 bg-brand-background/90 flex flex-col items-center justify-center z-50">
+    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-brand-accent border-solid"></div>
+    <p class="mt-4 text-brand-text text-xl font-headline">Loading Shifts...</p>
+  </div>
+
+  <!-- Header -->
+  <header id="app-header" class="bg-brand-background shadow-md hidden-until-load">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+      <div class="mb-2 sm:mb-0">
+        <h1 class="text-2xl font-headline font-bold text-brand-text">Boulder Chevra Kadisha</h1>
+        <p id="welcome-message" class="text-lg text-brand-text/80 font-semibold"></p>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 hidden-until-load">
+    <!-- Message box for alerts -->
+    <div id="message-box" class="hidden p-4 mb-6 rounded-lg font-bold shadow-md" role="alert"></div>
+
+    <!-- Dynamic Event Info Section -->
+    <section id="event-info-section" class="hidden bg-brand-info-bg text-brand-text p-6 mb-8 rounded-xl shadow-lg border-l-4 border-brand-accent">
+      <h2 class="text-2xl font-headline font-bold mb-3">Current Shmira Information</h2>
+      <div class="space-y-2 text-sm">
+        <div class="flex items-start"><span class="font-bold w-32 shrink-0">Deceased Name(s)</span><span id="event-name" class="font-headline font-bold text-lg text-brand-signup"></span></div>
+        <div class="flex items-start"><span class="font-bold w-32 shrink-0">Location</span><span id="event-address"></span></div>
+        <div class="flex items-start"><span class="font-bold w-32 shrink-0">Personal Info</span><span id="event-bio" class="italic"></span></div>
+      </div>
+    </section>
+
+    <!-- Tab Buttons -->
+    <div class="mb-8">
+      <h2 class="text-3xl font-headline font-semibold text-brand-text mb-4">Available Shifts & Your Signups</h2>
+      <div class="flex border-b border-brand-text/20 mb-4">
+        <button id="tab-available" onclick="showTab('available')" class="px-4 py-2 text-lg font-semibold border-b-2 border-brand-accent text-brand-accent transition duration-300">Available Shifts</button>
+        <button id="tab-signedup" onclick="showTab('signedup')" class="px-4 py-2 text-lg font-semibold border-b-2 border-transparent text-brand-text/60 hover:text-brand-accent transition duration-300">Your Signed Up Shifts<span id="signedup-count" class="ml-1"></span></button>
+      </div>
+
+      <!-- Shifts containers -->
+      <div id="shifts-available" class="space-y-4">
+        <p id="no-available-shifts" class="hidden text-lg italic text-brand-text/70">No shifts are currently available.</p>
+        <!-- Dynamic shift cards inserted here -->
+      </div>
+
+      <div id="shifts-signedup" class="space-y-4 hidden">
+        <!-- Signed up shifts inserted here -->
+      </div>
+    </div>
+
+    <!-- Bulk Signup Modal -->
+    <div id="bulk-signup-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="closeBulkModal()">
+      <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full" onclick="event.stopPropagation()">
+        <h3 class="text-xl font-headline font-bold mb-4 text-brand-text">Confirm Multiple Signups</h3>
+        <p class="mb-6 text-brand-text">You are about to sign up for <span id="shifts-to-confirm-count" class="font-bold text-brand-signup">0</span> shifts. Are you sure?</p>
+        <div class="flex justify-end space-x-3">
+          <button onclick="closeBulkModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300 font-semibold">Cancel</button>
+          <button onclick="performBulkSignup()" class="px-4 py-2 bg-brand-signup text-white rounded-lg hover:bg-brand-signup/90 transition duration-300 font-bold shadow-lg">Confirm Signups</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="custom-confirm" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div class="custom-confirm-content bg-white p-6 rounded-xl shadow-lg max-w-md w-full text-center">
+        <h4 id="confirm-title" class="text-xl font-headline font-bold mb-3 text-brand-text">Confirm Action</h4>
+        <p id="confirm-message" class="mb-6 text-brand-text"></p>
+        <div class="flex justify-center space-x-3">
+          <button id="confirm-cancel" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300 font-semibold">Cancel</button>
+          <button id="confirm-ok" class="px-4 py-2 bg-brand-signup text-white rounded-lg hover:bg-brand-signup/90 transition duration-300 font-bold shadow-lg">OK</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+
+    const volunteerName = <?= volunteerName ?>;
+    const volunteerToken = <?= volunteerToken ?>;
+    const isMember = <?= isMember ?>;
+
+    console.log("script volunteerName:", volunteerName);
+    console.log("script volunteerToken:", volunteerToken);
+    
+    // Helper to get URL parameter by name
+    function getParameterByName(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    // Variables for DOM elements
+    const dom = {
+      loading: document.getElementById("loading"),
+      header: document.getElementById("app-header"),
+      mainContent: document.getElementById("main-content"),
+      welcomeMessage: document.getElementById("welcome-message"),
+      messageBox: document.getElementById("message-box"),
+      availableShifts: document.getElementById("shifts-available"),
+      signedUpShifts: document.getElementById("shifts-signedup"),
+      signedUpCount: document.getElementById("signedup-count"),
+      noAvailableShifts: document.getElementById("no-available-shifts"),
+      tabAvailable: document.getElementById("tab-available"),
+      tabSignedup: document.getElementById("tab-signedup"),
+      bulkModal: document.getElementById("bulk-signup-modal"),
+      shiftsToConfirmCount: document.getElementById("shifts-to-confirm-count"),
+      eventInfoSection: document.getElementById("event-info-section"),
+      eventName: document.getElementById("event-name"),
+      eventAddress: document.getElementById("event-address"),
+      eventBio: document.getElementById("event-bio"),
+      customConfirm: document.getElementById("custom-confirm"),
+      confirmTitle: document.getElementById("confirm-title"),
+      confirmMessage: document.getElementById("confirm-message"),
+      confirmOk: document.getElementById("confirm-ok"),
+      confirmCancel: document.getElementById("confirm-cancel"),
+    };
+
+    // State variables
+    let ALLSHIFTS = [];
+    let SIGNEDUPSHIFTIDS = [];
+    let CURRENTEVENTINFO = null;
+    let CURRENTTAB = "available";
+
+    // Custom confirm modal callback
+    let confirmActionCallback = null;
+
+    // Initialize Confirm modal buttons handlers
+    function initConfirmModal() {
+      dom.confirmOk.onclick = () => {
+        dom.customConfirm.classList.add("hidden");
+        if (confirmActionCallback) confirmActionCallback(true);
+      };
+      dom.confirmCancel.onclick = () => {
+        dom.customConfirm.classList.add("hidden");
+        if (confirmActionCallback) confirmActionCallback(false);
+      };
+    }
+
+    // Show a temporary message in the message box
+    function showMessage(message, type) {
+      const box = dom.messageBox;
+      box.textContent = message;
+      box.className = "p-4 mb-6 rounded-lg font-bold shadow-md";
+      if (type === "success") box.classList.add("bg-green-100", "border", "border-green-400", "text-green-700");
+      else if (type === "error") box.classList.add("bg-red-100", "border", "border-red-400", "text-red-700");
+      else if (type === "warning") box.classList.add("bg-yellow-100", "border", "border-yellow-400", "text-yellow-700");
+      box.classList.remove("hidden");
+      setTimeout(() => box.classList.add("hidden"), 7000);
+    }
+
+    // Custom confirm replacement
+    function customConfirm(message, callback, title = "Confirm Action") {
+      dom.confirmTitle.textContent = title;
+      dom.confirmMessage.textContent = message;
+      dom.customConfirm.classList.remove("hidden");
+      confirmActionCallback = callback;
+    }
+
+    // Format a date string from epoch milliseconds to "Day Mon Date Year"
+    function formatShortDate(epochTime) {
+      const date = new Date(epochTime);
+      const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+      const month = date.getMonth() + 1;
+      const dateOfMonth = date.getDate();
+      const year = date.getFullYear();
+      return `${dayName} ${month}/${dateOfMonth}/${year}`;
+    }
+
+    // Show/hide tabs and content
+    function showTab(tabName) {
+      CURRENTTAB = tabName;
+      dom.tabAvailable.classList.toggle("border-brand-accent", tabName === "available");
+      dom.tabAvailable.classList.toggle("text-brand-accent", tabName === "available");
+      dom.tabAvailable.classList.toggle("border-transparent", tabName !== "available");
+      dom.tabAvailable.classList.toggle("text-brand-text/60", tabName !== "available");
+
+      dom.tabSignedup.classList.toggle("border-brand-accent", tabName === "signedup");
+      dom.tabSignedup.classList.toggle("text-brand-accent", tabName === "signedup");
+      dom.tabSignedup.classList.toggle("border-transparent", tabName !== "signedup");
+      dom.tabSignedup.classList.toggle("text-brand-text/60", tabName !== "signedup");
+
+      dom.availableShifts.classList.toggle("hidden", tabName !== "available");
+      dom.noAvailableShifts.classList.toggle("hidden", !(tabName === "available" && dom.availableShifts.children.length > 1));
+      dom.signedUpShifts.classList.toggle("hidden", tabName !== "signedup");
+
+      renderBulkAction();
+    }
+
+    // Render dynamic event info
+    function renderEventInfo() {
+      if (CURRENTEVENTINFO) {
+        dom.eventName.textContent = CURRENTEVENTINFO.eventName || "N/A";
+        dom.eventAddress.textContent = CURRENTEVENTINFO.address || "Address pending or restricted.";
+        let personalInfo = CURRENTEVENTINFO.bio || "";
+        if (!personalInfo || personalInfo.trim().length < 5 || personalInfo.toLowerCase().includes("no further personal details")) {
+          personalInfo = '<span class="italic text-gray-500">Personal information coming.</span>';
+        }
+        dom.eventBio.innerHTML = personalInfo;
+        dom.eventInfoSection.classList.remove("hidden");
+      } else {
+        dom.eventInfoSection.classList.add("hidden");
+      }
+    }
+
+    // Create shift card DOM element
+    function createShiftCard(shift, isSignedUp, isFull, canSignup) {
+      const card = document.createElement("div");
+      card.className =
+        "bg-white p-4 rounded-xl shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center border-l-4 " +
+        (isSignedUp ? "border-brand-accent" : isFull ? "border-brand-full/50" : "border-brand-signup/50") +
+        " transition duration-300 hover:shadow-xl";
+
+      // Shift details
+      const detailsDiv = document.createElement("div");
+      detailsDiv.className = "mb-3 sm:mb-0 sm:w-35";
+      const formattedDate = formatShortDate(shift.startTimeEpoch);
+      detailsDiv.innerHTML = `
+        <p class="text-xl font-headline font-bold text-brand-text">${shift.eventName}</p>
+        <p class="text-base text-brand-text/90 mb-1"><span class="font-semibold">Location:</span> ${shift.location || "Location not specified"}</p>
+        <p class="text-sm text-brand-text/80"><span class="font-semibold text-brand-text">${formattedDate}</span> <span class="text-brand-signup font-bold">${shift.shiftTime}</span></p>
+      `;
+      card.appendChild(detailsDiv);
+
+      // Actions column
+      const actionsDiv = document.createElement("div");
+      actionsDiv.className = "flex items-center space-x-3 w-full sm:w-auto sm:justify-end";
+
+      if (isSignedUp) {
+        const cancelBtn = document.createElement("button");
+        cancelBtn.textContent = "Cancel";
+        cancelBtn.className = "px-4 py-2 bg-brand-cancel text-white rounded-full text-sm hover:bg-brand-cancel/90 transition duration-300 shadow-md font-semibold";
+        cancelBtn.onclick = () => {
+          customConfirm(
+            `Are you sure you want to cancel the shift for ${shift.eventName} on ${formattedDate} at ${shift.shiftTime}?`,
+            (confirmed) => {
+              if (confirmed) handleAction("drop", shift.id);
+            },
+            "Confirm Cancellation"
+          );
+        };
+        actionsDiv.appendChild(cancelBtn);
+      } else if (canSignup) {
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.id = `bulk-check-${shift.id}`;
+        checkbox.className = "h-5 w-5 text-brand-signup rounded border-gray-300 focus:ring-brand-signup transition duration-300 bulk-checkbox";
+        checkbox.dataset.shiftId = shift.id;
+        checkbox.onchange = updateBulkActionButton;
+
+        const checkboxWrapper = document.createElement("label");
+        checkboxWrapper.htmlFor = `bulk-check-${shift.id}`;
+        checkboxWrapper.className = "flex items-center space-x-2 cursor-pointer";
+        checkboxWrapper.appendChild(checkbox);
+        actionsDiv.appendChild(checkboxWrapper);
+
+        const signupBtn = document.createElement("button");
+        signupBtn.textContent = "Sign Up";
+        signupBtn.className = "px-4 py-2 bg-brand-signup text-white rounded-full text-sm hover:bg-brand-signup/90 transition duration-300 shadow-md font-semibold w-full sm:w-auto";
+        signupBtn.onclick = () => {
+          customConfirm(
+            `Are you sure you want to sign up for the shift for ${shift.eventName} on ${formattedDate} at ${shift.shiftTime}?`,
+            (confirmed) => {
+              if (confirmed) handleAction("signup", shift.id);
+            },
+            "Confirm Sign Up"
+          );
+        };
+        actionsDiv.appendChild(signupBtn);
+      } else if (isFull) {
+        const fullSpan = document.createElement("span");
+        fullSpan.textContent = "FULL";
+        fullSpan.className = "px-4 py-2 bg-gray-100 text-gray-500 border border-gray-300 rounded-full text-sm font-semibold w-full sm:w-auto text-center";
+        actionsDiv.appendChild(fullSpan);
+      }
+
+      card.appendChild(actionsDiv);
+      return card;
+    }
+
+    // Render shifts into containers
+    function renderShifts() {
+      dom.availableShifts.innerHTML = "";
+      dom.signedUpShifts.innerHTML = "";
+      let signedUpCount = 0;
+      let availableShiftsExist = false;
+
+      ALLSHIFTS.sort((a, b) => a.startTimeEpoch - b.startTimeEpoch).forEach((shift) => {
+        const isSignedUp = SIGNEDUPSHIFTIDS.includes(shift.id);
+        const isFull = shift.currentVolunteers >= shift.maxVolunteers;
+        const canSignup = !isSignedUp && !isFull;
+        const shiftCard = createShiftCard(shift, isSignedUp, isFull, canSignup);
+        if (isSignedUp) {
+          dom.signedUpShifts.appendChild(shiftCard);
+          signedUpCount++;
+        } else if (!isFull) {
+          dom.availableShifts.appendChild(shiftCard);
+          availableShiftsExist = true;
+        }
+      });
+
+      dom.signedUpCount.textContent = signedUpCount;
+      dom.noAvailableShifts.classList.toggle("hidden", availableShiftsExist);
+      dom.signedUpShifts.classList.toggle("hidden", signedUpCount === 0);
+      CURRENTTAB !== "available" && showTab(CURRENTTAB); // maintain tab view
+      renderBulkAction();
+    }
+
+    // Bulk action button management
+    function renderBulkAction() {
+      // Implementation can be added here as in volunteer_portal.html if needed
+    }
+    function updateBulkActionButton() {
+      // Implementation can be added here as in volunteer_portal.html if needed
+    }
+    function openBulkModal() {
+      // Implementation can be added here as in volunteer_portal.html if needed
+    }
+    function closeBulkModal() {
+      dom.bulkModal.classList.add("hidden");
+    }
+    function performBulkSignup() {
+      // Assume google.script.run backend is ready for this
+      closeBulkModal();
+      dom.loading.classList.remove("hidden");
+      const selectedShiftIds = Array.from(document.querySelectorAll(".bulk-checkbox:checked")).map(cb => cb.dataset.shiftId);
+      if (selectedShiftIds.length === 0) {
+        showMessage("No shifts were selected for bulk signup.", "warning");
+        dom.loading.classList.add("hidden");
+        return;
+      }
+      google.script.run.withSuccessHandler(handleBulkSignupResponse).withFailureHandler(handleServerError).handleBulkShiftSignup(selectedShiftIds, volunteerToken);
+    }
+    function handleBulkSignupResponse(response) {
+      if (response === true) {
+        showMessage("Successfully signed up for all selected shifts. Refreshing data...", "success");
+      } else if (typeof response === "string") {
+        showMessage(response, "warning");
+      } else {
+        showMessage("Bulk signup finished with an unknown result. Refreshing data...", "warning");
+      }
+      document.querySelectorAll(".bulk-checkbox").forEach(cb => cb.checked = false);
+      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
+    }
+
+    // Single action handler for signup or drop
+    function handleAction(action, shiftId) {
+      dom.loading.classList.remove("hidden");
+      const successCallback = (result) => {
+        if (result === true) {
+          showMessage("Shift action successful! Refreshing shifts...", "success");
+        } else if (typeof result === "string") {
+          showMessage("Shift action failed: " + result, "error");
+        } else {
+          showMessage("Shift action failed due to an unknown conflict. Please re-check the list.", "error");
+        }
+        google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
+      };
+      if (action === "signup") {
+        google.script.run.withSuccessHandler(successCallback).withFailureHandler(handleServerError).handleShiftSignup(shiftId, volunteerToken);
+      } else if (action === "drop") {
+        google.script.run.withSuccessHandler(successCallback).withFailureHandler(handleServerError).handleShiftDrop(shiftId, volunteerToken);
+      }
+    }
+
+    // Server error handler
+    function handleServerError(error) {
+      dom.loading.classList.add("hidden");
+      showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
+      console.error("Client-side error from server call:", error.message);
+    }
+
+    // Load shifts and signups from backend
+    function loadShifts(data) {
+      dom.loading.classList.add("hidden");
+      dom.header.classList.remove("hidden-until-load");
+      dom.mainContent.classList.remove("hidden-until-load");
+      if (data.error) {
+        showMessage(data.error, "error");
+        return;
+      }
+      ALLSHIFTS = data.allShifts;
+      SIGNEDUPSHIFTIDS = data.signedUpShiftIds;
+      CURRENTEVENTINFO = data.currentEvent || null;
+      renderEventInfo();
+      renderShifts();
+      showTab(CURRENTTAB);
+      console.log("Data loaded successfully.");
+    }
+
+    function initializePortal() {
+      initConfirmModal();
+
+      if (!volunteerToken) {
+        dom.loading.innerHTML = `
+          <h2 class="text-3xl text-brand-text font-headline">Access Denied</h2>
+          <p class="mt-4 text-lg">Your personalized link is missing a security token. Please use the unique link provided in your email.</p>
+        `;
+        return;
+      }
+
+      dom.welcomeMessage.textContent = `Hello, ${volunteerName}!`;
+
+      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
+    }
+
+    document.addEventListener("DOMContentLoaded", initializePortal);
+  </script>
+</body>
+
+</html>

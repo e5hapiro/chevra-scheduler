@@ -1,458 +1,473 @@
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Boulder Chevra Kadisha Volunteer Portal</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Google Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet" />
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          colors: {
-            "brand-background": "#F9F4ED",
-            "brand-text": "#3D4066",
-            "brand-accent": "#0072BC",
-            "brand-signup": "#0072BC",
-            "brand-full": "#F05252",
-            "brand-cancel": "#A63A3A",
-            "brand-info-bg": "#EAE0D6",
-          },
-          fontFamily: {
-            headline: ["Playfair Display", "serif"],
-            text: ["Karla", "sans-serif"],
-          },
-        },
-      },
-    };
-  </script>
-  <style>
-    body {
-      background-color: #F9F4ED;
-      color: #3D4066;
-      font-family: 'Karla', sans-serif;
-      min-height: 100vh;
-    }
-    .font-headline {
-      font-family: 'Playfair Display', serif;
-    }
-    .hidden-until-load {
-      display: none;
-    }
-  </style>
-</head>
-
-<body class="font-text antialiased">
-  <!-- Loading overlay -->
-  <div id="loading" class="fixed inset-0 bg-brand-background/90 flex flex-col items-center justify-center z-50">
-    <div class="animate-spin rounded-full h-16 w-16 border-t-4 border-brand-accent border-solid"></div>
-    <p class="mt-4 text-brand-text text-xl font-headline">Loading Shifts...</p>
-  </div>
-
-  <!-- Header -->
-  <header id="app-header" class="bg-brand-background shadow-md hidden-until-load">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row justify-between items-start sm:items-center">
-      <div class="mb-2 sm:mb-0">
-        <h1 class="text-2xl font-headline font-bold text-brand-text">Boulder Chevra Kadisha</h1>
-        <p id="welcome-message" class="text-lg text-brand-text/80 font-semibold"></p>
-      </div>
-    </div>
-  </header>
-
-  <!-- Main Content -->
-  <main id="main-content" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 hidden-until-load">
-    <!-- Message box for alerts -->
-    <div id="message-box" class="hidden p-4 mb-6 rounded-lg font-bold shadow-md" role="alert"></div>
-
-    <!-- Dynamic Event Info Section -->
-    <section id="event-info-section" class="hidden bg-brand-info-bg text-brand-text p-6 mb-8 rounded-xl shadow-lg border-l-4 border-brand-accent">
-      <h2 class="text-2xl font-headline font-bold mb-3">Current Shmira Information</h2>
-      <div class="space-y-2 text-sm">
-        <div class="flex items-start"><span class="font-bold w-32 shrink-0">Deceased Name(s)</span><span id="event-name" class="font-headline font-bold text-lg text-brand-signup"></span></div>
-        <div class="flex items-start"><span class="font-bold w-32 shrink-0">Location</span><span id="event-address"></span></div>
-        <div class="flex items-start"><span class="font-bold w-32 shrink-0">Personal Info</span><span id="event-bio" class="italic"></span></div>
-      </div>
-    </section>
-
-    <!-- Tab Buttons -->
-    <div class="mb-8">
-      <h2 class="text-3xl font-headline font-semibold text-brand-text mb-4">Available Shifts & Your Signups</h2>
-      <div class="flex border-b border-brand-text/20 mb-4">
-        <button id="tab-available" onclick="showTab('available')" class="px-4 py-2 text-lg font-semibold border-b-2 border-brand-accent text-brand-accent transition duration-300">Available Shifts</button>
-        <button id="tab-signedup" onclick="showTab('signedup')" class="px-4 py-2 text-lg font-semibold border-b-2 border-transparent text-brand-text/60 hover:text-brand-accent transition duration-300">Your Signed Up Shifts<span id="signedup-count" class="ml-1"></span></button>
-      </div>
-
-      <!-- Shifts containers -->
-      <div id="shifts-available" class="space-y-4">
-        <p id="no-available-shifts" class="hidden text-lg italic text-brand-text/70">No shifts are currently available.</p>
-        <!-- Dynamic shift cards inserted here -->
-      </div>
-
-      <div id="shifts-signedup" class="space-y-4 hidden">
-        <!-- Signed up shifts inserted here -->
-      </div>
-    </div>
-
-    <!-- Bulk Signup Modal -->
-    <div id="bulk-signup-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50" onclick="closeBulkModal()">
-      <div class="bg-white p-6 rounded-xl shadow-2xl max-w-sm w-full" onclick="event.stopPropagation()">
-        <h3 class="text-xl font-headline font-bold mb-4 text-brand-text">Confirm Multiple Signups</h3>
-        <p class="mb-6 text-brand-text">You are about to sign up for <span id="shifts-to-confirm-count" class="font-bold text-brand-signup">0</span> shifts. Are you sure?</p>
-        <div class="flex justify-end space-x-3">
-          <button onclick="closeBulkModal()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300 font-semibold">Cancel</button>
-          <button onclick="performBulkSignup()" class="px-4 py-2 bg-brand-signup text-white rounded-lg hover:bg-brand-signup/90 transition duration-300 font-bold shadow-lg">Confirm Signups</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Custom Confirmation Modal -->
-    <div id="custom-confirm" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="custom-confirm-content bg-white p-6 rounded-xl shadow-lg max-w-md w-full text-center">
-        <h4 id="confirm-title" class="text-xl font-headline font-bold mb-3 text-brand-text">Confirm Action</h4>
-        <p id="confirm-message" class="mb-6 text-brand-text"></p>
-        <div class="flex justify-center space-x-3">
-          <button id="confirm-cancel" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition duration-300 font-semibold">Cancel</button>
-          <button id="confirm-ok" class="px-4 py-2 bg-brand-signup text-white rounded-lg hover:bg-brand-signup/90 transition duration-300 font-bold shadow-lg">OK</button>
-        </div>
-      </div>
-    </div>
-  </main>
-
-  <script>
-
-    const volunteerName = <?= volunteerName ?>;
-    const volunteerToken = <?= volunteerToken ?>;
-    const isMember = <?= isMember ?>;
-
-    console.log("script volunteerName:", volunteerName);
-    console.log("script volunteerToken:", volunteerToken);
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Boulder Chevra Kadisha Volunteer Portal</title>
     
-    // Helper to get URL parameter by name
-    function getParameterByName(name) {
-      const url = new URL(window.location.href);
-      return url.searchParams.get(name);
-    }
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Load Google Fonts: Karla (Text) and Playfair Display (Headline Substitute for Adonis/Larkin) -->
+    <link href="https://fonts.googleapis.com/css2?family=Karla:ital,wght@0,200..800;1,200..800&family=Playfair+Display:ital,wght@0,400..900;1,400..900&display=swap" rel="stylesheet">
+    
+    <script>
+        // Configure Tailwind to use the custom colors and fonts
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Backgrounds and Base Colors
+                        'brand-background': '#F9F4ED', // Body BG / Lightest Color (Design #1)
+                        'brand-text': '#3D4066',     // Dark Blue/Gray for Primary Text and Header BG (Design #2)
+                        'brand-info-bg': '#EAE0D6', // Light Tan/Grey for Information Boxes
+                        'brand-shift-border': '#C8CCCE', // Light border for shifts
 
-    // Variables for DOM elements
-    const dom = {
-      loading: document.getElementById("loading"),
-      header: document.getElementById("app-header"),
-      mainContent: document.getElementById("main-content"),
-      welcomeMessage: document.getElementById("welcome-message"),
-      messageBox: document.getElementById("message-box"),
-      availableShifts: document.getElementById("shifts-available"),
-      signedUpShifts: document.getElementById("shifts-signedup"),
-      signedUpCount: document.getElementById("signedup-count"),
-      noAvailableShifts: document.getElementById("no-available-shifts"),
-      tabAvailable: document.getElementById("tab-available"),
-      tabSignedup: document.getElementById("tab-signedup"),
-      bulkModal: document.getElementById("bulk-signup-modal"),
-      shiftsToConfirmCount: document.getElementById("shifts-to-confirm-count"),
-      eventInfoSection: document.getElementById("event-info-section"),
-      eventName: document.getElementById("event-name"),
-      eventAddress: document.getElementById("event-address"),
-      eventBio: document.getElementById("event-bio"),
-      customConfirm: document.getElementById("custom-confirm"),
-      confirmTitle: document.getElementById("confirm-title"),
-      confirmMessage: document.getElementById("confirm-message"),
-      confirmOk: document.getElementById("confirm-ok"),
-      confirmCancel: document.getElementById("confirm-cancel"),
-    };
-
-    // State variables
-    let ALLSHIFTS = [];
-    let SIGNEDUPSHIFTIDS = [];
-    let CURRENTEVENTINFO = null;
-    let CURRENTTAB = "available";
-
-    // Custom confirm modal callback
-    let confirmActionCallback = null;
-
-    // Initialize Confirm modal buttons handlers
-    function initConfirmModal() {
-      dom.confirmOk.onclick = () => {
-        dom.customConfirm.classList.add("hidden");
-        if (confirmActionCallback) confirmActionCallback(true);
-      };
-      dom.confirmCancel.onclick = () => {
-        dom.customConfirm.classList.add("hidden");
-        if (confirmActionCallback) confirmActionCallback(false);
-      };
-    }
-
-    // Show a temporary message in the message box
-    function showMessage(message, type) {
-      const box = dom.messageBox;
-      box.textContent = message;
-      box.className = "p-4 mb-6 rounded-lg font-bold shadow-md";
-      if (type === "success") box.classList.add("bg-green-100", "border", "border-green-400", "text-green-700");
-      else if (type === "error") box.classList.add("bg-red-100", "border", "border-red-400", "text-red-700");
-      else if (type === "warning") box.classList.add("bg-yellow-100", "border", "border-yellow-400", "text-yellow-700");
-      box.classList.remove("hidden");
-      setTimeout(() => box.classList.add("hidden"), 7000);
-    }
-
-    // Custom confirm replacement
-    function customConfirm(message, callback, title = "Confirm Action") {
-      dom.confirmTitle.textContent = title;
-      dom.confirmMessage.textContent = message;
-      dom.customConfirm.classList.remove("hidden");
-      confirmActionCallback = callback;
-    }
-
-    // Format a date string from epoch milliseconds to "Day Mon Date Year"
-    function formatShortDate(epochTime) {
-      const date = new Date(epochTime);
-      const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
-      const month = date.getMonth() + 1;
-      const dateOfMonth = date.getDate();
-      const year = date.getFullYear();
-      return `${dayName} ${month}/${dateOfMonth}/${year}`;
-    }
-
-    // Show/hide tabs and content
-    function showTab(tabName) {
-      CURRENTTAB = tabName;
-      dom.tabAvailable.classList.toggle("border-brand-accent", tabName === "available");
-      dom.tabAvailable.classList.toggle("text-brand-accent", tabName === "available");
-      dom.tabAvailable.classList.toggle("border-transparent", tabName !== "available");
-      dom.tabAvailable.classList.toggle("text-brand-text/60", tabName !== "available");
-
-      dom.tabSignedup.classList.toggle("border-brand-accent", tabName === "signedup");
-      dom.tabSignedup.classList.toggle("text-brand-accent", tabName === "signedup");
-      dom.tabSignedup.classList.toggle("border-transparent", tabName !== "signedup");
-      dom.tabSignedup.classList.toggle("text-brand-text/60", tabName !== "signedup");
-
-      dom.availableShifts.classList.toggle("hidden", tabName !== "available");
-      dom.noAvailableShifts.classList.toggle("hidden", !(tabName === "available" && dom.availableShifts.children.length > 1));
-      dom.signedUpShifts.classList.toggle("hidden", tabName !== "signedup");
-
-      renderBulkAction();
-    }
-
-    // Render dynamic event info
-    function renderEventInfo() {
-      if (CURRENTEVENTINFO) {
-        dom.eventName.textContent = CURRENTEVENTINFO.eventName || "N/A";
-        dom.eventAddress.textContent = CURRENTEVENTINFO.address || "Address pending or restricted.";
-        let personalInfo = CURRENTEVENTINFO.bio || "";
-        if (!personalInfo || personalInfo.trim().length < 5 || personalInfo.toLowerCase().includes("no further personal details")) {
-          personalInfo = '<span class="italic text-gray-500">Personal information coming.</span>';
+                        // Action Colors
+                        'brand-accent': '#0072BC',    // Blue: Active State / Borders / Secondary Action
+                        'brand-signup': '#E0A960',    // Gold: Primary Action Button BG
+                        'brand-full': '#F05252',      // Red for full/cancel/warning
+                        'brand-cancel': '#A63A3A',    // Darker Red for cancel
+                    },
+                    fontFamily: {
+                        headline: ['"Playfair Display"', 'serif'], // Used for titles and key text
+                        text: ['Karla', 'sans-serif'],          // Used for body text
+                    },
+                },
+            }
         }
-        dom.eventBio.innerHTML = personalInfo;
-        dom.eventInfoSection.classList.remove("hidden");
-      } else {
-        dom.eventInfoSection.classList.add("hidden");
-      }
-    }
-
-    // Create shift card DOM element
-    function createShiftCard(shift, isSignedUp, isFull, canSignup) {
-      const card = document.createElement("div");
-      card.className =
-        "bg-white p-4 rounded-xl shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center border-l-4 " +
-        (isSignedUp ? "border-brand-accent" : isFull ? "border-brand-full/50" : "border-brand-signup/50") +
-        " transition duration-300 hover:shadow-xl";
-
-      // Shift details
-      const detailsDiv = document.createElement("div");
-      detailsDiv.className = "mb-3 sm:mb-0 sm:w-35";
-      const formattedDate = formatShortDate(shift.startTimeEpoch);
-      detailsDiv.innerHTML = `
-        <p class="text-xl font-headline font-bold text-brand-text">${shift.eventName}</p>
-        <p class="text-base text-brand-text/90 mb-1"><span class="font-semibold">Location:</span> ${shift.location || "Location not specified"}</p>
-        <p class="text-sm text-brand-text/80"><span class="font-semibold text-brand-text">${formattedDate}</span> <span class="text-brand-signup font-bold">${shift.shiftTime}</span></p>
-      `;
-      card.appendChild(detailsDiv);
-
-      // Actions column
-      const actionsDiv = document.createElement("div");
-      actionsDiv.className = "flex items-center space-x-3 w-full sm:w-auto sm:justify-end";
-
-      if (isSignedUp) {
-        const cancelBtn = document.createElement("button");
-        cancelBtn.textContent = "Cancel";
-        cancelBtn.className = "px-4 py-2 bg-brand-cancel text-white rounded-full text-sm hover:bg-brand-cancel/90 transition duration-300 shadow-md font-semibold";
-        cancelBtn.onclick = () => {
-          customConfirm(
-            `Are you sure you want to cancel the shift for ${shift.eventName} on ${formattedDate} at ${shift.shiftTime}?`,
-            (confirmed) => {
-              if (confirmed) handleAction("drop", shift.id);
-            },
-            "Confirm Cancellation"
-          );
-        };
-        actionsDiv.appendChild(cancelBtn);
-      } else if (canSignup) {
-        const checkbox = document.createElement("input");
-        checkbox.type = "checkbox";
-        checkbox.id = `bulk-check-${shift.id}`;
-        checkbox.className = "h-5 w-5 text-brand-signup rounded border-gray-300 focus:ring-brand-signup transition duration-300 bulk-checkbox";
-        checkbox.dataset.shiftId = shift.id;
-        checkbox.onchange = updateBulkActionButton;
-
-        const checkboxWrapper = document.createElement("label");
-        checkboxWrapper.htmlFor = `bulk-check-${shift.id}`;
-        checkboxWrapper.className = "flex items-center space-x-2 cursor-pointer";
-        checkboxWrapper.appendChild(checkbox);
-        actionsDiv.appendChild(checkboxWrapper);
-
-        const signupBtn = document.createElement("button");
-        signupBtn.textContent = "Sign Up";
-        signupBtn.className = "px-4 py-2 bg-brand-signup text-white rounded-full text-sm hover:bg-brand-signup/90 transition duration-300 shadow-md font-semibold w-full sm:w-auto";
-        signupBtn.onclick = () => {
-          customConfirm(
-            `Are you sure you want to sign up for the shift for ${shift.eventName} on ${formattedDate} at ${shift.shiftTime}?`,
-            (confirmed) => {
-              if (confirmed) handleAction("signup", shift.id);
-            },
-            "Confirm Sign Up"
-          );
-        };
-        actionsDiv.appendChild(signupBtn);
-      } else if (isFull) {
-        const fullSpan = document.createElement("span");
-        fullSpan.textContent = "FULL";
-        fullSpan.className = "px-4 py-2 bg-gray-100 text-gray-500 border border-gray-300 rounded-full text-sm font-semibold w-full sm:w-auto text-center";
-        actionsDiv.appendChild(fullSpan);
-      }
-
-      card.appendChild(actionsDiv);
-      return card;
-    }
-
-    // Render shifts into containers
-    function renderShifts() {
-      dom.availableShifts.innerHTML = "";
-      dom.signedUpShifts.innerHTML = "";
-      let signedUpCount = 0;
-      let availableShiftsExist = false;
-
-      ALLSHIFTS.sort((a, b) => a.startTimeEpoch - b.startTimeEpoch).forEach((shift) => {
-        const isSignedUp = SIGNEDUPSHIFTIDS.includes(shift.id);
-        const isFull = shift.currentVolunteers >= shift.maxVolunteers;
-        const canSignup = !isSignedUp && !isFull;
-        const shiftCard = createShiftCard(shift, isSignedUp, isFull, canSignup);
-        if (isSignedUp) {
-          dom.signedUpShifts.appendChild(shiftCard);
-          signedUpCount++;
-        } else if (!isFull) {
-          dom.availableShifts.appendChild(shiftCard);
-          availableShiftsExist = true;
+    </script>
+    <style>
+        /* Apply brand background and base font globally */
+        body {
+            background-color: #F9F4ED; /* Background of #1 */
+            color: #3D4066;
+            font-family: 'Karla', sans-serif;
         }
-      });
-
-      dom.signedUpCount.textContent = signedUpCount;
-      dom.noAvailableShifts.classList.toggle("hidden", availableShiftsExist);
-      dom.signedUpShifts.classList.toggle("hidden", signedUpCount === 0);
-      CURRENTTAB !== "available" && showTab(CURRENTTAB); // maintain tab view
-      renderBulkAction();
-    }
-
-    // Bulk action button management
-    function renderBulkAction() {
-      // Implementation can be added here as in volunteer_portal.html if needed
-    }
-    function updateBulkActionButton() {
-      // Implementation can be added here as in volunteer_portal.html if needed
-    }
-    function openBulkModal() {
-      // Implementation can be added here as in volunteer_portal.html if needed
-    }
-    function closeBulkModal() {
-      dom.bulkModal.classList.add("hidden");
-    }
-    function performBulkSignup() {
-      // Assume google.script.run backend is ready for this
-      closeBulkModal();
-      dom.loading.classList.remove("hidden");
-      const selectedShiftIds = Array.from(document.querySelectorAll(".bulk-checkbox:checked")).map(cb => cb.dataset.shiftId);
-      if (selectedShiftIds.length === 0) {
-        showMessage("No shifts were selected for bulk signup.", "warning");
-        dom.loading.classList.add("hidden");
-        return;
-      }
-      google.script.run.withSuccessHandler(handleBulkSignupResponse).withFailureHandler(handleServerError).handleBulkShiftSignup(selectedShiftIds, volunteerToken);
-    }
-    function handleBulkSignupResponse(response) {
-      if (response === true) {
-        showMessage("Successfully signed up for all selected shifts. Refreshing data...", "success");
-      } else if (typeof response === "string") {
-        showMessage(response, "warning");
-      } else {
-        showMessage("Bulk signup finished with an unknown result. Refreshing data...", "warning");
-      }
-      document.querySelectorAll(".bulk-checkbox").forEach(cb => cb.checked = false);
-      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
-    }
-
-    // Single action handler for signup or drop
-    function handleAction(action, shiftId) {
-      dom.loading.classList.remove("hidden");
-      const successCallback = (result) => {
-        if (result === true) {
-          showMessage("Shift action successful! Refreshing shifts...", "success");
-        } else if (typeof result === "string") {
-          showMessage("Shift action failed: " + result, "error");
-        } else {
-          showMessage("Shift action failed due to an unknown conflict. Please re-check the list.", "error");
+        html, body {
+            height: 100%;
+            margin: 0;
+            box-sizing: border-box;
         }
-        google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
-      };
-      if (action === "signup") {
-        google.script.run.withSuccessHandler(successCallback).withFailureHandler(handleServerError).handleShiftSignup(shiftId, volunteerToken);
-      } else if (action === "drop") {
-        google.script.run.withSuccessHandler(successCallback).withFailureHandler(handleServerError).handleShiftDrop(shiftId, volunteerToken);
-      }
-    }
+        /* Explicitly apply headline font for headings/titles */
+        .font-headline {
+            font-family: 'Playfair Display', serif;
+        }
+        /* Tab Content Control */
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        /* Custom Tab Button Transition */
+        .tab-button {
+            border-bottom: 3px solid transparent;
+            margin-bottom: -1px; /* To prevent double border with parent */
+        }
+        .tab-button.active {
+            border-bottom: 3px solid #0072BC; /* brand-accent */
+            color: #0072BC !important; /* brand-accent */
+        }
+    </style>
+</head>
+<body class="font-text antialiased">
+    <div class="h-full flex flex-col">
+        
+        <!-- Header (Design #2 Structure & Style) -->
+        <header class="shadow-lg bg-brand-text">
+            <div class="max-w-7xl mx-auto px-6 py-8">
+                <div class="flex items-center justify-between">
+                    <h1 class="text-3xl font-bold leading-tight text-brand-background">
+                        <span class="font-headline">BOULDER CHEVRA KADISHA</span><br>
+                        <span class="font-headline">Shmira Schedule</span>
+                    </h1>
+                    <div class="flex items-center gap-4">
+                        <span id="welcome-message" class="font-headline text-brand-background"></span>
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center font-semibold text-brand-text" style="background-color: #E0A960;">
+                            SM
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-    // Server error handler
-    function handleServerError(error) {
-      dom.loading.classList.add("hidden");
-      showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
-      console.error("Client-side error from server call:", error.message);
-    }
+        <!-- Main Content -->
+        <main class="flex-1 overflow-auto">
+            <div class="max-w-7xl mx-auto px-6 py-8">
+                
+                <!-- Tab Navigation (Design #2 Structure) -->
+                <div class="mb-6">
+                    <div class="flex gap-2 mb-0 border-b border-brand-shift-border">
+                        <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-button active px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-background text-brand-accent shadow-md">
+                            Schedule Shifts
+                        </button>
+                        <button onclick="switchTab('myshifts')" id="tab-myshifts" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
+                            My Shifts
+                        </button>
+                        <button onclick="switchTab('events')" id="tab-events" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
+                            Mortuary Information
+                        </button>
+                        <button onclick="switchTab('signups')" id="tab-signups" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
+                            Volunteer History
+                        </button>
+                    </div>
+                    
+                    <!-- Tab Content Container -->
+                    <div class="bg-brand-background rounded-lg shadow-md border border-t-0 border-brand-shift-border">
 
-    // Load shifts and signups from backend
-    function loadShifts(data) {
-      dom.loading.classList.add("hidden");
-      dom.header.classList.remove("hidden-until-load");
-      dom.mainContent.classList.remove("hidden-until-load");
-      if (data.error) {
-        showMessage(data.error, "error");
-        return;
-      }
-      ALLSHIFTS = data.allShifts;
-      SIGNEDUPSHIFTIDS = data.signedUpShiftIds;
-      CURRENTEVENTINFO = data.currentEvent || null;
-      renderEventInfo();
-      renderShifts();
-      showTab(CURRENTTAB);
-      console.log("Data loaded successfully.");
-    }
+                        <!-- Tab Content -->
+                        <div class="p-6">
+                            
+                            <!-- Schedule Shifts Tab -->
+                            <div id="content-schedule" class="tab-content active">
+                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Available Shifts</h2>
+                                
+                                <!-- Available Shifts -->
+                                <div class="grid gap-6" id="available-shifts-grid"></div>
 
-    function initializePortal() {
-      initConfirmModal();
+                            </div>
 
-      if (!volunteerToken) {
-        dom.loading.innerHTML = `
-          <h2 class="text-3xl text-brand-text font-headline">Access Denied</h2>
-          <p class="mt-4 text-lg">Your personalized link is missing a security token. Please use the unique link provided in your email.</p>
-        `;
-        return;
-      }
+                            <!-- My Shifts Tab -->
+                            <div id="content-myshifts" class="tab-content">
+                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">My Scheduled Shifts</h2>
+                                
+                                <div class="grid gap-4">
+                                    <div class="bg-brand-background border-l-4 rounded-xl p-6 shadow-sm border-brand-accent border-2 hover:shadow-lg transition-shadow">
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <h3 class="text-lg font-semibold font-headline text-brand-text">Full Name Shmira</h3>
+                                                <p class="text-brand-text">Location: Location</p>
+                                                <p class="text-brand-text">Shift Date and Time</p>
+                                            </div>
+                                            <button onclick="cancelShift('shift-x')" class="text-white px-3 py-1 rounded-full text-sm font-medium bg-brand-full hover:bg-brand-cancel transition-colors shadow-md">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
 
-      dom.welcomeMessage.textContent = `Hello, ${volunteerName}!`;
+                                    <div class="bg-brand-background border-l-4 rounded-xl p-6 shadow-sm border-brand-accent border-2 hover:shadow-lg transition-shadow">
+                                        <div class="flex justify-between items-center">
+                                            <div>
+                                                <h3 class="text-lg font-semibold font-headline text-brand-text">Full Name Shmira</h3>
+                                                <p class="text-brand-text">Location: Location</p>
+                                                <p class="text-brand-text">Shift Date and Time</p>
+                                            </div>
+                                            <button onclick="cancelShift('shift-y')" class="text-white px-3 py-1 rounded-full text-sm font-medium bg-brand-full hover:bg-brand-cancel transition-colors shadow-md">
+                                                Cancel
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-      google.script.run.withSuccessHandler(loadShifts).withFailureHandler(handleServerError).getShiftsAndSignups(volunteerToken, isMember);
-    }
+                            <!-- Mortuary Information Tab (UPDATED) -->
+                            <div id="content-events" class="tab-content">
+                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Mortuary Information</h2>
+                                
+                                <div class="grid gap-6">
+                                    
+                                    <!-- Crist Mortuary Block - UPDATED STRUCTURE -->
+                                    <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+                                        <!-- Header Section -->
+                                        <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                                            <h3 class="text-lg font-semibold text-brand-text">Crist Mortuary</h3>
+                                        </div>
+                                        <!-- Body Section -->
+                                        <div class="p-6 text-brand-text"> 
+                                            <div class="mb-4 opacity-90">
+                                                <p>3395 Penrose Place</p>
+                                                <p>Boulder, CO 80301</p>
+                                                <p class="mb-2">303-442-4411</p>
+                                                <a href="https://maps.google.com/?q=3395+Penrose+Place,+Boulder,+CO+80301" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
+                                                    📍 Get Directions
+                                                </a>
+                                            </div>
+                                            <!-- General Info -->
+                                            <p class="leading-relaxed">
+                                               ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
+                                            </p>
+                                        </div>
+                                    </div>
 
-    document.addEventListener("DOMContentLoaded", initializePortal);
-  </script>
+                                    <!-- Greenwood & Myers Mortuary Block - UPDATED STRUCTURE -->
+                                    <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+                                        <!-- Header Section -->
+                                        <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                                            <h3 class="text-lg font-semibold text-brand-text">Greenwood & Myers Mortuary</h3>
+                                        </div>
+                                        <!-- Body Section -->
+                                        <div class="p-6 text-brand-text">
+                                            <div class="mb-4 opacity-90">
+                                                <p>2969 Baseline Road</p>
+                                                <p>Boulder, CO 80303</p>
+                                                <p class="mb-2">(303) 440-3960</p>
+                                                <a href="https://maps.google.com/?q=2969+Baseline+Road,+Boulder,+CO+80303" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
+                                                    📍 Get Directions
+                                                </a>
+                                            </div>
+                                            <!-- General Info -->
+                                            <p class="leading-relaxed">
+                                                ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Volunteer History Tab - UPDATED CONTENT AND STRUCTURE -->
+                            <div id="content-signups" class="tab-content">
+                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Your Volunteer History</h2>
+                                
+                                <!-- Explanatory Note for YTD Focus -->
+                                <p class="text-sm text-brand-text/80 mb-6 p-4 rounded-lg bg-brand-info-bg border border-brand-shift-border">
+                                    Since a full historical year of data is not yet available, the statistics below focus on **Year-To-Date (YTD) 2025** figures. Once data for previous years is logged, this section will include a selector to view past historical trends.
+                                </p>
+                                
+                                <!-- Section 1: Your YTD Stats - Grid of 3 -->
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                                    <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+                                        <div class="text-3xl font-bold mb-1">47</div>
+                                        <div class="text-white opacity-90">2025 YTD Hours</div>
+                                    </div>
+                                    <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+                                        <div class="text-3xl font-bold mb-1">156</div>
+                                        <div class="text-white opacity-90">2025 YTD Number of Different Shmira</div>
+                                    </div>
+                                    <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+                                        <div class="text-3xl font-bold mb-1">85%</div>
+                                        <div class="text-white opacity-90">2025 Anything else</div>
+                                    </div>
+                                </div> 
+
+                                <!-- Section 2: Your Volunteer Stats by Year (Updated Header) -->
+                                <div class="mb-8 bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+                                    <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                                        <h3 class="text-lg font-semibold text-brand-text">Your Volunteer Stats (2025 YTD)</h3>
+                                    </div>
+                                    <div class="p-6">
+                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div class="text-center">
+                                                <div class="text-2xl font-bold text-brand-accent">12</div>
+                                                <div class="text-brand-text">2025 Hours</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="text-2xl font-bold text-brand-accent">5</div>
+                                                <div class="text-brand-text">2025 Number of Different Shmira</div>
+                                            </div>
+                                            <div class="text-center">
+                                                <div class="text-2xl font-bold text-brand-accent">tbd</div>
+                                                <div class="text-brand-text">2025 Anything else</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Section 3: Boulder Chevra Kadisha Shmira Stats by Year (Updated Header) -->
+                                <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+                                    <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                                        <h3 class="text-lg font-semibold text-brand-text">BCK Shmira Stats (2025 YTD)</h3>
+                                    </div>
+                                    <div class="p-6">
+                                        <div class="space-y-6">
+                                            <div>
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="font-medium text-brand-text">2025 YTD Total BCK Requested Shifts</span>
+                                                    <span class="text-sm text-brand-text/70">2025 YTD Total BCK Filled Shifts</span>
+                                                </div>
+                                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                                    <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
+                                                </div>
+                                                <div class="text-sm text-brand-text/70 mt-1">2025 YTD % Shifts Filled</div>
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="font-medium text-brand-text">Community Fair</span>
+                                                    <span class="text-sm text-brand-text/70">18/25 shifts filled</span>
+                                                </div>
+                                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                                    <div class="bg-brand-signup h-3 rounded-full" style="width: 72%"></div>
+                                                </div>
+                                                <div class="text-sm text-brand-text/70 mt-1">72% complete</div>
+                                            </div>
+                                            
+                                            <div>
+                                                <div class="flex justify-between items-center mb-2">
+                                                    <span class="font-medium text-brand-text">Beach Cleanup</span>
+                                                    <span class="text-sm text-brand-text/70">8/10 shifts filled</span>
+                                                </div>
+                                                <div class="w-full bg-gray-200 rounded-full h-3">
+                                                    <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
+                                                </div>
+                                                <div class="text-sm text-brand-text/70 mt-1">80% complete</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+      
+        function init() {
+
+          console.log("Script loaded at all?");
+
+            // Parse JSON string injected by server-side templating
+            const data = JSON.parse(<?= data ?>);
+
+            // Debug: log the entire events array first
+            console.log('Data object:', data);
+
+            const volunteerName = data.name;
+            const volunteerToken = data.token;
+            const isMember = data.isMember;
+            const events = data.events;
+
+
+            // Debug: log the entire events array first
+            console.log('Events object:', events);
+
+            /*
+            console.log("starting script init function");
+            console.log("script volunteerName:", volunteerName);
+            console.log("script volunteerToken:", volunteerToken);
+            */
+
+            // Display the welcome message and displaying the volunteer name
+            const welcomeMessage = document.getElementById('welcome-message');
+            if (welcomeMessage && volunteerName) {
+                welcomeMessage.textContent = "Welcome, " + volunteerName;
+            }
+
+            // Generate the Shifts Table
+            renderAvailableShifts(events);
+
+            switchTab('schedule');
+        }
+
+
+        function renderAvailableShifts(events) {
+            const shiftsContainer = document.getElementById('available-shifts-grid'); // Your container
+            shiftsContainer.innerHTML = ''; // Clear previous content
+
+            const startDate = new Date(event["Start Date"]);
+            const endDate = new Date(event["End Date"]);
+            const startFormatted = startDate.toLocaleString(); // includes time
+            const endFormatted = endDate.toLocaleString(); // includes time
+
+            events.forEach((event, idx) => {
+                const shiftHTML = `
+                    <div class="border rounded-xl p-6 hover:shadow-lg transition-shadow border-brand-shift-border" style="background-color: #f9f4ed;">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
+                                <p class="text-brand-text">Location: ${event["Location"]}</p>
+                                <p class="text-brand-text">Start: ${startFormatted} to End: ${endFormatted}</p>
+                            </div>
+                            <button onclick="signUpForShift('${event["Token"] || "shift-" + idx}')" class="text-white px-6 py-2 rounded-lg font-medium transition-colors bg-brand-signup hover:bg-brand-signup/80">
+                                Sign Up
+                            </button>
+                        </div>
+                        <div class="p-4 rounded-lg bg-brand-info-bg">
+                            <h4 class="font-semibold mb-2 text-brand-text">About ${event["Deceased Name"]}</h4>
+                            <p class="text-brand-text text-sm leading-relaxed">
+                                ${event["Personal Information"] || ""}
+                            </p>
+                        </div>
+                    </div>
+                `;
+                // Debug: log the specific event and generated HTML
+                console.log('Rendering event object:', event);
+                console.log('Generated shift HTML:', shiftHTML);
+
+                shiftsContainer.innerHTML += shiftHTML;
+            });
+        }
+
+
+        function switchTab(tabName) {
+            // Hide all tab contents
+            const contents = document.querySelectorAll('.tab-content');
+            contents.forEach(content => {
+                content.classList.remove('active');
+            });
+
+            // Deactivate all tab buttons
+            const tabs = document.querySelectorAll('.tab-button');
+            tabs.forEach(tab => {
+                tab.classList.remove('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+                tab.classList.add('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
+            });
+
+            // Show selected tab content
+            document.getElementById('content-' + tabName).classList.add('active');
+
+            // Activate selected tab button
+            const activeTab = document.getElementById('tab-' + tabName);
+            activeTab.classList.remove('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
+            activeTab.classList.add('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+        }
+
+        function signUpForShift(shiftId) {
+            // Replaces alert() with a temporary message box
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'fixed top-4 right-4 bg-brand-signup text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            messageDiv.textContent = '✅ Successfully signed up for shift!';
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        // Note: The cancelShift and confirmCancel functions use the forbidden window.confirm()/alert() replacement
+        // pattern from the original Design #2. I have kept the visual implementation to preserve the design logic.
+
+        function cancelShift(shiftId) {
+            // Create inline confirmation
+            const confirmDiv = document.createElement('div');
+            confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            confirmDiv.innerHTML = `
+                <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+                    <h3 class="text-lg font-semibold text-brand-text mb-4 font-headline">Cancel Shift?</h3>
+                    <p class="text-brand-text/80 mb-6">Are you sure you want to cancel this shift? This action cannot be undone.</p>
+                    <div class="flex gap-3 justify-end">
+                        <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-brand-text/70 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+                            Keep Shift
+                        </button>
+                        <button onclick="confirmCancel('${shiftId}')" class="px-4 py-2 bg-brand-full hover:bg-brand-cancel text-white rounded-lg font-medium shadow-md transition-colors">
+                            Cancel Shift
+                        </button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(confirmDiv);
+        }
+
+        function confirmCancel(shiftId) {
+            // Remove confirmation dialog
+            const confirmDialog = document.querySelector('.fixed.inset-0.bg-black');
+            if(confirmDialog) confirmDialog.remove();
+            
+            // Show success message
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'fixed top-4 right-4 bg-brand-full text-white px-6 py-3 rounded-lg shadow-lg z-50';
+            messageDiv.textContent = '❌ Shift cancelled successfully';
+            document.body.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                messageDiv.remove();
+            }, 3000);
+        }
+
+        // Initialize to the Schedule Shifts tab on load
+        window.onload = init;
+    </script>
 </body>
-
 </html>

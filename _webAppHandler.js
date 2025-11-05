@@ -179,7 +179,7 @@ function sendShiftEmail(recipientEmail, shift, actionType, volunteerName, volunt
 function getShiftsAndSignups(token, isMember) {
 
   function testTokenLookup(token) {
-    var result = getMemberInfoByToken_(token);
+    var result = getMemberInfoByToken(setConfigProperties(),token);
     console.log(result);
   }
 
@@ -187,9 +187,10 @@ function getShiftsAndSignups(token, isMember) {
 
   try {
     Logger.log("--- START getShiftsAndSignups (token" + token + ") ---");
+
     const volunteerInfo = isMember
-      ? getMemberInfoByToken_(token)
-      : getGuestInfoByToken_(token);
+      ? getMemberInfoByToken(setConfigProperties(),token)
+      : getGuestInfoByToken(setConfigProperties(),token);
 
     if (!volunteerInfo) {
       return { error: "Invalid or expired authorization token." };
@@ -260,9 +261,11 @@ function handleShiftSignup(shiftId, token, isMember) {
   lock.waitLock(30000);
 
   try {
+
     const volunteerInfo = isMember
-      ? getMemberInfoByToken_(token)
-      : getGuestInfoByToken_(token);
+      ? getMemberInfoByToken(setConfigProperties(),token)
+      : getGuestInfoByToken(setConfigProperties(),token);
+
     if (!volunteerInfo) {
       Logger.log("handleShiftSignup failed: Invalid token.");
       return "Invalid or expired authorization token.";
@@ -336,9 +339,11 @@ function handleShiftDrop(shiftId, token, isMember) {
   lock.waitLock(30000);
 
   try {
+
     const volunteerInfo = isMember
-      ? getMemberInfoByToken_(token)
-      : getGuestInfoByToken_(token);
+      ? getMemberInfoByToken(setConfigProperties(),token)
+      : getGuestInfoByToken(setConfigProperties(),token);
+
     if (!volunteerInfo) {
       Logger.log("handleShiftDrop failed: Invalid token.");
       return "Invalid or expired authorization token.";
