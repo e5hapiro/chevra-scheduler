@@ -204,16 +204,6 @@
       confirmActionCallback = callback;
     }
 
-    // Format a date string from epoch milliseconds to "Day Mon Date Year"
-    function formatShortDate(epochTime) {
-      const date = new Date(epochTime);
-      const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
-      const month = date.getMonth() + 1;
-      const dateOfMonth = date.getDate();
-      const year = date.getFullYear();
-      return `${dayName} ${month}/${dateOfMonth}/${year}`;
-    }
-
     // Show/hide tabs and content
     function showTab(tabName) {
       CURRENTTAB = tabName;

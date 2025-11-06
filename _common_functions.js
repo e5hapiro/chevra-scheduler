@@ -58,6 +58,7 @@ function setConfigProperties() {
     SPREADSHEET_ID: ss,
     EVENT_FORM_RESPONSES: 'Form Responses 1',
     SHIFTS_MASTER_SHEET: 'Shifts Master',
+    VOLUNTEER_LIST_SHEET: 'Volunteer Shifts',
     GUESTS_SHEET: 'Guests',
     MEMBERS_SHEET: 'Members',
     EVENT_MAP: 'Event Map',
@@ -250,3 +251,14 @@ function getActiveSpreadsheetId() {
   
   return spreadsheetId;
 }
+
+// Format a date string from epoch milliseconds to "Day Mon Date Year"
+function formatShortDate(epochTime) {
+  const date = new Date(epochTime);
+  const dayName = date.toLocaleDateString("en-US", { weekday: "short" });
+  const month = date.getMonth() + 1;
+  const dateOfMonth = date.getDate();
+  const year = date.getFullYear();
+  return `${dayName} ${month}/${dateOfMonth}/${year}`;
+}
+

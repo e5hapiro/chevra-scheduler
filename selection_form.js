@@ -190,14 +190,65 @@ function getEventsForToken_(sheetInputs, guestOrMemberToken) {    // The master 
   const eventTokenIdx = eventHeaders.indexOf("Token");
   var events = [];
 
+
   for (let i = 1; i < eventData.length; i++) {
     if (matchedEventTokens.indexOf(eventData[i][eventTokenIdx]) > -1) {
       var eventObj = {};
       for (var col = 0; col < eventHeaders.length; col++) {
         eventObj[eventHeaders[col]] = eventData[i][col];
       }
+      const eventToken = eventObj['Token'];
+      eventObj.availableShifts = getAvailableShiftsForEvent(sheetInputs, eventToken); // Inject available shifts array
       events.push(eventObj);
     }
   }
+
   return events;
+}
+
+function getAvailableShiftsForEvent(sheetInputs, eventToken) {
+
+  const ss = getSpreadsheet_(sheetInputs.SPREADSHEET_ID);
+
+  // The shifts master sheet
+  const shiftsSheet = ss.getSheetByName(sheetInputs.SHIFTS_MASTER_SHEET);
+  if (!shiftsSheet) throw new Error(`Sheet not found: ${sheetInputs.SHIFTS_MASTER_SHEET}`);
+
+  // The shifts master sheet
+  const volunteerShiftsSheet = ss.getSheetByName(sheetInputs.VOLUNTEER_LIST_SHEET);
+  if (!volunteerShiftsSheet) throw new Error(`Sheet not found: ${sheetInputs.VOLUNTEER_LIST_SHEET}`);
+
+
+  const shiftsData = shiftsSheet.getDataRange().getValues();
+  const shiftsHeaders = shiftsData[0];
+  const eventTokenIdx = shiftsHeaders.indexOf("Event Token");
+  const shiftIdIdx = shiftsHeaders.indexOf("Shift ID");
+
+  // Filter all shifts with relevant event token
+  let eventShifts = [];
+  for (let i = 1; i < shiftsData.length; i++) {
+    if (shiftsData[i][eventTokenIdx] === eventToken) {
+      let shiftObj = {};
+      for (let j = 0; j < shiftsHeaders.length; j++) {
+        shiftObj[shiftsHeaders[j]] = shiftsData[i][j];
+      }
+      eventShifts.push(shiftObj);
+    }
+  }
+
+  // Find claimed shifts
+  const volunteerData = volunteerShiftsSheet.getDataRange().getValues();
+  const volunteerHeaders = volunteerData[0];
+  const volunteerShiftIdIdx = volunteerHeaders.indexOf("Shift ID");
+  const claimedShiftIds = new Set();
+  for (let i = 1; i < volunteerData.length; i++) {
+    claimedShiftIds.add(volunteerData[i][volunteerShiftIdIdx]);
+  }
+
+  const availableShifts = eventShifts.filter(shift => !claimedShiftIds.has(shift[shiftsHeaders[shiftIdIdx]]));
+
+  //logQCVars_("AvailableShifts:", availableShifts);
+
+  // Return only shifts that are NOT already claimed
+  return availableShifts;
 }

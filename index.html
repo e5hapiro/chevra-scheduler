@@ -82,6 +82,12 @@
                         <span class="font-headline">Shmira Schedule</span>
                     </h1>
                     <div class="flex items-center gap-4">
+                        <!-- Bulk Signup Button -->
+                        <button id="bulk-signup-btn"
+                            class="bg-brand-signup text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-brand-signup/90 disabled:opacity-50"
+                            onclick="performBulkSignup()" disabled>
+                            Sign Up for Selected Shifts
+                        </button>
                         <span id="welcome-message" class="font-headline text-brand-background"></span>
                         <div class="w-12 h-12 rounded-full flex items-center justify-center font-semibold text-brand-text" style="background-color: #E0A960;">
                             SM
@@ -313,10 +319,13 @@
     </div>
 
     <script>
-      
+
+        // Global set to track selected shifts
+        var selectedShiftIds = new Set();
+        var events = null;
+
         function init() {
 
-          console.log("Script loaded at all?");
 
             // Parse JSON string injected by server-side templating
             const data = JSON.parse(<?= data ?>);
@@ -324,11 +333,11 @@
             // Debug: log the entire events array first
             console.log('Data object:', data);
 
+            events = data.events;
+
             const volunteerName = data.name;
             const volunteerToken = data.token;
             const isMember = data.isMember;
-            const events = data.events;
-
 
             // Debug: log the entire events array first
             console.log('Events object:', events);
@@ -351,45 +360,83 @@
             switchTab('schedule');
         }
 
-
         function renderAvailableShifts(events) {
-            const shiftsContainer = document.getElementById('available-shifts-grid'); // Your container
-            shiftsContainer.innerHTML = ''; // Clear previous content
-
-            const startDate = new Date(event["Start Date"]);
-            const endDate = new Date(event["End Date"]);
-            const startFormatted = startDate.toLocaleString(); // includes time
-            const endFormatted = endDate.toLocaleString(); // includes time
+            const shiftsContainer = document.getElementById('available-shifts-grid');
+            shiftsContainer.innerHTML = '';
 
             events.forEach((event, idx) => {
-                const shiftHTML = `
-                    <div class="border rounded-xl p-6 hover:shadow-lg transition-shadow border-brand-shift-border" style="background-color: #f9f4ed;">
-                        <div class="flex justify-between items-start mb-4">
-                            <div>
-                                <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
-                                <p class="text-brand-text">Location: ${event["Location"]}</p>
-                                <p class="text-brand-text">Start: ${startFormatted} to End: ${endFormatted}</p>
-                            </div>
-                            <button onclick="signUpForShift('${event["Token"] || "shift-" + idx}')" class="text-white px-6 py-2 rounded-lg font-medium transition-colors bg-brand-signup hover:bg-brand-signup/80">
-                                Sign Up
-                            </button>
+                let eventHTML = `
+                    <div class="border rounded-xl p-6 mb-6" style="background-color: #f9f4ed;">
+                        <div class="mb-4">
+                            <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
+                            <p class="text-brand-text">Location: ${event["Location"]}</p>
+                            <p class="text-brand-text">Start: ${new Date(event["Start Date"]).toLocaleString()} to End: ${new Date(event["End Date"]).toLocaleString()}</p>
                         </div>
                         <div class="p-4 rounded-lg bg-brand-info-bg">
                             <h4 class="font-semibold mb-2 text-brand-text">About ${event["Deceased Name"]}</h4>
-                            <p class="text-brand-text text-sm leading-relaxed">
-                                ${event["Personal Information"] || ""}
-                            </p>
+                            <p class="text-brand-text text-sm leading-relaxed">${event["Personal Information"] || ""}</p>
+                        </div>
+                        <div class="mt-6">
+                            <h4 class="font-bold mb-2 text-brand-text">Available Shifts</h4>
+                            <div class="space-y-2">
+                                ${event.availableShifts.length === 0 ?
+                                    '<p class="text-gray-500">No available shifts.</p>'
+                                    :
+                                    event.availableShifts.map(shift =>
+                                        `<button
+                                            class="shift-select-btn ${selectedShiftIds.has(shift["Shift ID"]) ? "bg-brand-signup text-white" : "bg-white text-brand-signup"}"
+                                            style="width:100%; padding:1em; margin-bottom:0.5em; border:1px solid #EEE; border-radius:8px; transition:background 0.2s;"
+                                            data-shift-id="${shift["Shift ID"]}"
+                                            onclick="toggleShiftSelection('${shift["Shift ID"]}')"
+                                        >
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <div>
+                                                    <p class="font-semibold">${shift["Shift Time"]}</p>
+                                                    <p class="text-sm">${shift["Location"] || "Location unknown"}</p>
+                                                </div>
+                                                <span>${selectedShiftIds.has(shift["Shift ID"]) ? "✓ Selected" : "Select"}</span>
+                                            </div>
+                                        </button>`
+                                    ).join('')
+                                }
+                            </div>
                         </div>
                     </div>
                 `;
-                // Debug: log the specific event and generated HTML
-                console.log('Rendering event object:', event);
-                console.log('Generated shift HTML:', shiftHTML);
-
-                shiftsContainer.innerHTML += shiftHTML;
+                shiftsContainer.innerHTML += eventHTML;
             });
+            updateBulkSignupButtonState();
         }
 
+        function toggleShiftSelection(shiftId) {
+            if (selectedShiftIds.has(shiftId)) {
+                selectedShiftIds.delete(shiftId);
+            } else {
+                selectedShiftIds.add(shiftId);
+            }
+            renderAvailableShifts(events); // 'events' should be your current displayed events array
+            updateBulkSignupButtonState();
+        }
+
+        function updateBulkSignupButtonState() {
+            const btn = document.getElementById('bulk-signup-btn');
+            btn.disabled = selectedShiftIds.size === 0;
+        }
+
+        function performBulkSignup() {
+            closeBulkModal && closeBulkModal(); // If modal present
+            dom.loading.classList.remove("hidden");
+            const ids = Array.from(selectedShiftIds);
+            if (ids.length === 0) {
+                showMessage("No shifts were selected for bulk signup.", "warning");
+                dom.loading.classList.add("hidden");
+                return;
+            }
+            google.script.run
+                .withSuccessHandler(handleBulkSignupResponse)
+                .withFailureHandler(handleServerError)
+                .handleBulkShiftSignup(ids, volunteerToken);
+        }
 
         function switchTab(tabName) {
             // Hide all tab contents
