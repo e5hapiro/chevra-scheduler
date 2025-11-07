@@ -28,6 +28,40 @@ function triggeredFunction() {
   bckLib.updateShiftsAndEventMap(setConfigProperties());
 }
 
+/**
+ * A map of function names (strings) to the actual function objects.
+ * This is the secure way to perform dynamic function calls (Dynamic Dispatch).
+ */
+const HANDLER_FUNCTIONS = {
+  // Key (the string name) : Value (the actual function to call)
+  "updateVolunteerShifts": updateVolunteerShifts,
+  "removeVolunteerShifts" : removeVolunteerShifts
+};
+
+function serverSideFunctionHandler(functionName, parameter1, parameter2, parameter3) {
+  // 1. Get configuration
+  const configParameters = setConfigProperties();
+  
+  // 2. Look up the function in the secure map
+  const targetFunction = HANDLER_FUNCTIONS[functionName];
+
+  // 3. Check if the function exists in the map
+  if (typeof targetFunction === 'function') {
+    // 4. Securely call the function with the parameters
+    return targetFunction(configParameters, parameter1, parameter2, parameter3);
+  } else {
+    // 5. Handle the case where the function name is unknown
+    console.error(`Unknown function name requested: ${functionName}`);
+    return { success: false, message: `Function '${functionName}' not found.` };
+  }
+}
+
+// --- Example of how the inner function might look (assuming it exists) ---
+// function updateVolunteerShifts(config, shiftIds, name, token) {
+//   // ... logic to update shifts ...
+//   return { success: true, data: "Shift updated successfully" }; // It should return a result
+// }
+
 
 /**
  * Sets script properties

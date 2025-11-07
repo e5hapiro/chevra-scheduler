@@ -199,6 +199,16 @@ function getEventsForToken_(sheetInputs, guestOrMemberToken) {    // The master 
       }
       const eventToken = eventObj['Token'];
       eventObj.availableShifts = getAvailableShiftsForEvent(sheetInputs, eventToken); // Inject available shifts array
+      eventObj.selectedShifts = getSelectedShiftsByToken(sheetInputs, eventToken, guestOrMemberToken);
+
+      logQCVars_("selectedShifts", eventObj.selectedShifts)
+
+      eventObj.selectedShifts.forEach(shift => {
+            console.log('Rendering shift:', shift);
+            console.log('Rendering shift time:', shift["Shift Time"]);
+                });
+
+
       events.push(eventObj);
     }
   }
@@ -252,3 +262,166 @@ function getAvailableShiftsForEvent(sheetInputs, eventToken) {
   // Return only shifts that are NOT already claimed
   return availableShifts;
 }
+
+function getSelectedShiftsByToken(sheetInputs, eventToken, userToken) {
+    const ss = getSpreadsheet_(sheetInputs.SPREADSHEET_ID);
+
+    const shiftsSheet = ss.getSheetByName(sheetInputs.SHIFTS_MASTER_SHEET);
+    if (!shiftsSheet) throw new Error(`Sheet not found: ${sheetInputs.SHIFTS_MASTER_SHEET}`);
+
+    const volunteerShiftsSheet = ss.getSheetByName(sheetInputs.VOLUNTEER_LIST_SHEET);
+    if (!volunteerShiftsSheet) throw new Error(`Sheet not found: ${sheetInputs.VOLUNTEER_LIST_SHEET}`);
+
+    // Get Volunteer Shits data
+    const volunteerData = volunteerShiftsSheet.getDataRange().getValues();
+    const volunteerHeaders = volunteerData[0];
+    const shiftIdIdx = volunteerHeaders.indexOf("Shift ID");
+    const userTokenIdx = volunteerHeaders.indexOf("Volunteer Token");
+
+    // Get all shift IDs for this user
+    const userShiftIds = new Set();
+    for (let i = 1; i < volunteerData.length; i++) {
+        if (volunteerData[i][userTokenIdx] === userToken) {
+            userShiftIds.add(volunteerData[i][shiftIdIdx]);
+        }
+    }
+
+    // Get all shift info for this event token
+    const shiftsData = shiftsSheet.getDataRange().getValues();
+    const shiftsHeaders = shiftsData[0];
+    const shiftIdCol = shiftsHeaders.indexOf("Shift ID");
+    const eventTokenCol = shiftsHeaders.indexOf("Event Token");
+
+    let selectedShifts = [];
+    for (let i = 1; i < shiftsData.length; i++) {
+        // Only include a shift if it matches both user and event
+        if (
+            shiftsData[i][eventTokenCol] === eventToken &&
+            userShiftIds.has(shiftsData[i][shiftIdCol])
+        ) {
+            let shiftObj = {};
+            for (let j = 0; j < shiftsHeaders.length; j++) {
+                shiftObj[shiftsHeaders[j]] = shiftsData[i][j];
+            }
+            selectedShifts.push(shiftObj);
+        }
+    }
+    return selectedShifts;
+}
+
+
+
+
+function updateVolunteerShifts(sheetInputs, selectedShiftIds, volunteerName, volunteerToken) {
+
+/*
+  console.log("updateVolunteerShifts:");
+  console.log("selectedShiftIds:");
+  console.log(selectedShiftIds);
+  console.log("volunteerName:");
+  console.log(volunteerName);
+  console.log("volunteerToken:");
+  console.log(volunteerToken);
+*/
+
+  try {
+ 
+   const ss = getSpreadsheet_(sheetInputs.SPREADSHEET_ID);
+
+    // The volunteer shifts sheet
+    const volunteerShiftsSheet = ss.getSheetByName(sheetInputs.VOLUNTEER_LIST_SHEET);
+    if (!volunteerShiftsSheet) throw new Error(`Sheet not found: ${sheetInputs.VOLUNTEER_LIST_SHEET}`);
+
+    const now = new Date();
+
+    // Get headers and indices
+    const data = volunteerShiftsSheet.getDataRange().getValues();
+    const headers = data[0];
+    const shiftIdIdx = headers.indexOf("Shift ID");
+    const volunteerTokenIdx = headers.indexOf("Volunteer Token");
+
+    // To ensure idempotency, collect all assigned (Shift ID, Volunteer Token) pairs
+    const assigned = new Set();
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i];
+      assigned.add(row[shiftIdIdx] + ":" + row[volunteerTokenIdx]);
+    }
+
+    let addedCount = 0;
+    selectedShiftIds.forEach(shiftId => {
+      // Avoid duplicate assignment
+      if (assigned.has(shiftId + ":" + volunteerToken)) return;
+
+      var newRow = [
+        Utilities.formatDate(now, Session.getScriptTimeZone(), 'MM/dd/yyyy HH:mm:ss'),
+        shiftId,
+        volunteerToken,
+        volunteerName
+      ];
+
+      console.log(newRow);
+
+      volunteerShiftsSheet.appendRow(newRow);
+
+      assigned.add(shiftId + ":" + volunteerToken);
+      addedCount += 1;
+    });
+
+    if (addedCount === 0) {
+      return "All selected shifts were already assigned to you or unavailable.";
+    }
+    return true; // Indicate success for frontend callback
+
+  } catch (e) {
+    Logger.log("Error in updateVolunteerShifts: " + e.message);
+    throw e;
+  }
+}
+
+
+function removeVolunteerShifts(sheetInputs, shiftIds, volunteerToken) {
+
+  console.log("updateVolunteerShifts:");
+  console.log("selectedShiftIds:");
+  console.log(selectedShiftIds);
+  console.log("volunteerName:");
+  console.log(volunteerName);
+  console.log("volunteerToken:");
+  console.log(volunteerToken);
+
+
+  try {
+ 
+   const ss = getSpreadsheet_(sheetInputs.SPREADSHEET_ID);
+
+    // The volunteer shifts sheet
+    const volunteerShiftsSheet = ss.getSheetByName(sheetInputs.VOLUNTEER_LIST_SHEET);
+    if (!volunteerShiftsSheet) throw new Error(`Sheet not found: ${sheetInputs.VOLUNTEER_LIST_SHEET}`);
+
+    const data = volunteerShiftsSheet.getDataRange().getValues();
+    const headers = data[0];
+    const shiftIdIdx = headers.indexOf("Shift ID");
+    const volunteerTokenIdx = headers.indexOf("Volunteer Token");
+
+    // Gather the rows to delete (row numbers in Apps Script are 1-based!)
+    let rowsToDelete = [];
+    for (let i = 1; i < data.length; i++) {
+      if (shiftIds.includes(data[i][shiftIdIdx]) && data[i][volunteerTokenIdx] === volunteerToken) {
+        rowsToDelete.push(i + 1); // add 1 for 1-based row index + 1 for header
+      }
+    }
+
+    // Delete from bottom up to preserve indexes
+    rowsToDelete.reverse().forEach(rowNum => {
+      volunteerShiftsSheet.deleteRow(rowNum);
+    });
+
+  } catch (e) {
+    Logger.log("Error in removeVolunteerShifts: " + e.message);
+    throw e;
+  }
+
+
+  return true;
+}
+

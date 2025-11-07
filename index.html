@@ -82,12 +82,6 @@
                         <span class="font-headline">Shmira Schedule</span>
                     </h1>
                     <div class="flex items-center gap-4">
-                        <!-- Bulk Signup Button -->
-                        <button id="bulk-signup-btn"
-                            class="bg-brand-signup text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-brand-signup/90 disabled:opacity-50"
-                            onclick="performBulkSignup()" disabled>
-                            Sign Up for Selected Shifts
-                        </button>
                         <span id="welcome-message" class="font-headline text-brand-background"></span>
                         <div class="w-12 h-12 rounded-full flex items-center justify-center font-semibold text-brand-text" style="background-color: #E0A960;">
                             SM
@@ -107,7 +101,7 @@
                         <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-button active px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-background text-brand-accent shadow-md">
                             Schedule Shifts
                         </button>
-                        <button onclick="switchTab('myshifts')" id="tab-myshifts" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
+                        <button onclick="switchTab('my-shifts')" id="tab-my-shifts" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
                             My Shifts
                         </button>
                         <button onclick="switchTab('events')" id="tab-events" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
@@ -123,48 +117,40 @@
 
                         <!-- Tab Content -->
                         <div class="p-6">
-                            
+
                             <!-- Schedule Shifts Tab -->
                             <div id="content-schedule" class="tab-content active">
-                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Available Shifts</h2>
+                                <div class="flex items-center justify-between mb-6">
+                                    <h2 class="text-2xl font-bold font-headline text-brand-text">
+                                        Available Shifts
+                                    </h2>
+                                    <button id="bulk-signup-btn"
+                                        class="bg-brand-signup text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-brand-signup/90 disabled:opacity-50"
+                                        onclick="performBulkSignup()" disabled>
+                                        Sign Up for Selected Shifts
+                                    </button>
+                                </div>
                                 
                                 <!-- Available Shifts -->
                                 <div class="grid gap-6" id="available-shifts-grid"></div>
-
                             </div>
 
                             <!-- My Shifts Tab -->
-                            <div id="content-myshifts" class="tab-content">
-                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">My Scheduled Shifts</h2>
-                                
-                                <div class="grid gap-4">
-                                    <div class="bg-brand-background border-l-4 rounded-xl p-6 shadow-sm border-brand-accent border-2 hover:shadow-lg transition-shadow">
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <h3 class="text-lg font-semibold font-headline text-brand-text">Full Name Shmira</h3>
-                                                <p class="text-brand-text">Location: Location</p>
-                                                <p class="text-brand-text">Shift Date and Time</p>
-                                            </div>
-                                            <button onclick="cancelShift('shift-x')" class="text-white px-3 py-1 rounded-full text-sm font-medium bg-brand-full hover:bg-brand-cancel transition-colors shadow-md">
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-
-                                    <div class="bg-brand-background border-l-4 rounded-xl p-6 shadow-sm border-brand-accent border-2 hover:shadow-lg transition-shadow">
-                                        <div class="flex justify-between items-center">
-                                            <div>
-                                                <h3 class="text-lg font-semibold font-headline text-brand-text">Full Name Shmira</h3>
-                                                <p class="text-brand-text">Location: Location</p>
-                                                <p class="text-brand-text">Shift Date and Time</p>
-                                            </div>
-                                            <button onclick="cancelShift('shift-y')" class="text-white px-3 py-1 rounded-full text-sm font-medium bg-brand-full hover:bg-brand-cancel transition-colors shadow-md">
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
+                            <div id="content-my-shifts" class="tab-content">
+                                <div class="flex items-center justify-between mb-6">
+                                    <h2 class="text-2xl font-bold font-headline text-brand-text">
+                                        My Shifts
+                                    </h2>
+                                    <button id="bulk-unselect-btn"
+                                        class="bg-red-500 text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-red-600 disabled:opacity-50"
+                                        onclick="performBulkUnselect()" disabled>
+                                        Remove Selected Shifts
+                                    </button>
                                 </div>
+                                <!-- User's currently signed-up shifts -->
+                                <div class="grid gap-6" id="selected-shifts-grid"></div>
                             </div>
+
 
                             <!-- Mortuary Information Tab (UPDATED) -->
                             <div id="content-events" class="tab-content">
@@ -322,7 +308,12 @@
 
         // Global set to track selected shifts
         var selectedShiftIds = new Set();
+        var selectedUnselectIds = new Set();
         var events = null;
+        var selectedEvents = null;
+        var volunteerName = "";
+        var volunteerToken = "";
+        var isMember = "";
 
         function init() {
 
@@ -333,11 +324,12 @@
             // Debug: log the entire events array first
             console.log('Data object:', data);
 
+            // Setting Form parameters
+            volunteerName = data.name;
+            volunteerToken = data.token;
+            isMember = data.isMember;
             events = data.events;
-
-            const volunteerName = data.name;
-            const volunteerToken = data.token;
-            const isMember = data.isMember;
+            selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
 
             // Debug: log the entire events array first
             console.log('Events object:', events);
@@ -356,9 +348,64 @@
 
             // Generate the Shifts Table
             renderAvailableShifts(events);
+            renderSelectedShifts(events);
 
             switchTab('schedule');
         }
+
+
+
+        function callServerFunction(functionName, parameter1, parameter2, parameter3) {
+          google.script.run
+            .withSuccessHandler(function(response) {
+              serverFunctionSuccessHandler(functionName, response)
+            })
+            .withFailureHandler(function(error) {
+              console.error(`Error calling ${functionName}:`, error);
+              // TODO: handle error on client side as needed
+            })
+            .serverSideFunctionHandler(functionName, parameter1, parameter2, parameter3);
+        }
+
+        /**
+         * A map of function names (strings) to the actual function objects.
+         * This is the secure way to perform dynamic function calls (Dynamic Dispatch).
+         */
+        const HANDLER_FUNCTIONS = {
+          // Key (the string name) : Value (the actual function to call)
+          "updateVolunteerShifts": successUpdateVolunteerShifts,
+          "removeVolunteerShifts" : successRemoveVolunteerShifts
+
+        };
+
+        function serverFunctionSuccessHandler(functionName, response){
+            console.log(`Success calling ${functionName}:`, response);
+            // 2. Look up the function in the secure map
+            const targetFunction = HANDLER_FUNCTIONS[functionName];
+
+            // 3. Check if the function exists in the map
+            if (typeof targetFunction === 'function') {
+              // 4. Securely call the function with the parameters
+              return targetFunction(response);
+            } else {
+              // 5. Handle the case where the function name is unknown
+              console.error(`Unknown function name requested: ${functionName}`);
+              return { success: false, message: `Function '${functionName}' not found.` };
+            }
+
+        }
+
+
+        function successUpdateVolunteerShifts(response){
+            showMessage("Thank you. Volunteer Shifts added", "success");
+            console.error(`Thank you. Volunteer Shifts added`);
+        }
+
+        function successRemoveVolunteerShifts(response){
+            showMessage("Thank you. Volunteer Shifts removed", "success");
+            console.error(`Thank you. Volunteer Shifts removed`);
+        }
+
 
         function renderAvailableShifts(events) {
             const shiftsContainer = document.getElementById('available-shifts-grid');
@@ -408,6 +455,68 @@
             updateBulkSignupButtonState();
         }
 
+        function renderSelectedShifts(selectedEvents) {
+            const shiftsContainer = document.getElementById('selected-shifts-grid');
+            shiftsContainer.innerHTML = '';
+
+            // Only render events with at least one selected shift
+            selectedEvents
+                .filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
+                .forEach((event, idx) => {
+                    let eventHTML = `
+                        <div class="border rounded-xl p-6 mb-6" style="background-color: #eef3f9;">
+                            <div class="mb-4">
+                                <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
+                                <p class="text-brand-text">Location: ${event["Location"]}</p>
+                                <p class="text-brand-text">Start: ${new Date(event["Start Date"]).toLocaleString()} to End: ${new Date(event["End Date"]).toLocaleString()}</p>
+                            </div>
+                            <div class="p-4 rounded-lg bg-brand-info-bg">
+                                <h4 class="font-semibold mb-2 text-brand-text">About ${event["Deceased Name"]}</h4>
+                                <p class="text-brand-text text-sm leading-relaxed">${event["Personal Information"] || ""}</p>
+                            </div>
+                            <div class="mt-6">
+                                <h4 class="font-bold mb-2 text-brand-text">Your Signed-Up Shifts</h4>
+                                <div class="space-y-2">
+                                    ${event.selectedShifts.map(shift =>
+                                        `<button
+                                            class="shift-select-btn bg-red-100 text-red-700"
+                                            style="width:100%; padding:1em; margin-bottom:0.5em; border:1px solid #FBB; border-radius:8px;"
+                                            data-shift-id="${shift["Shift ID"]}"
+                                            onclick="toggleShiftUnselect('${shift["Shift ID"]}')"
+                                        >
+                                            <div style="display:flex; justify-content:space-between; align-items:center;">
+                                                <div>
+                                                    <p class="font-semibold">${shift["Shift Time"]}</p>
+                                                    <p class="text-sm">${shift["Location"] || "Location unknown"}</p>
+                                                </div>
+                                                <span>✓ Signed Up (Click to Unselect)</span>
+                                            </div>
+                                        </button>`
+                                    ).join('')}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    shiftsContainer.innerHTML += eventHTML;
+                });
+            updateBulkUnselectButtonState();
+        }
+
+
+        function toggleShiftUnselect(shiftId) {
+            if (selectedUnselectIds.has(shiftId)) {
+                selectedUnselectIds.delete(shiftId);
+            } else {
+                selectedUnselectIds.add(shiftId);
+            }
+            renderSelectedShifts(selectedEvents); // assumes you have selectedEvents in global context
+            updateBulkUnselectButtonState();
+        }
+
+        function updateBulkUnselectButtonState() {
+            document.getElementById('bulk-unselect-btn').disabled = selectedUnselectIds.size === 0;
+        }
+
         function toggleShiftSelection(shiftId) {
             if (selectedShiftIds.has(shiftId)) {
                 selectedShiftIds.delete(shiftId);
@@ -424,18 +533,50 @@
         }
 
         function performBulkSignup() {
-            closeBulkModal && closeBulkModal(); // If modal present
-            dom.loading.classList.remove("hidden");
+//            closeBulkModal && closeBulkModal(); // If modal present
+//            dom.loading.classList.remove("hidden");
             const ids = Array.from(selectedShiftIds);
             if (ids.length === 0) {
                 showMessage("No shifts were selected for bulk signup.", "warning");
-                dom.loading.classList.add("hidden");
+//                dom.loading.classList.add("hidden");
                 return;
             }
-            google.script.run
-                .withSuccessHandler(handleBulkSignupResponse)
-                .withFailureHandler(handleServerError)
-                .handleBulkShiftSignup(ids, volunteerToken);
+            handleBulkShiftSignup(ids);
+
+        }
+
+        function performBulkUnselect() {
+            const ids = Array.from(selectedUnselectIds);
+            if (ids.length === 0) {
+                showMessage("No shifts were selected for bulk removal.", "warning");
+//                dom.loading.classList.add("hidden");
+                return;
+            }
+            handleBulkShiftUnselect(ids);
+        }
+
+
+        function handleBulkSignupResponse() {
+          //'tbd'
+        }
+
+        function handleBulkShiftSignup(selectedShiftIds) {
+            console.log ("got here - handleBulkShiftSignup")
+            console.log (selectedShiftIds) ;
+            callServerFunction("updateVolunteerShifts", selectedShiftIds, volunteerName, volunteerToken);
+        }
+
+        function handleBulkShiftUnselect (shiftIds) {
+            console.log ("got here - handleBulkShiftUnselect")
+            console.log (shiftIds) ;
+            callServerFunction("removeVolunteerShifts", shiftIds, volunteerName, volunteerToken);
+        }
+
+        // Server error handler
+        function handleServerError(error) {
+//          dom.loading.classList.add("hidden");
+          showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
+          console.error("Client-side error from server call:", error.message);
         }
 
         function switchTab(tabName) {
@@ -453,13 +594,17 @@
             });
 
             // Show selected tab content
-            document.getElementById('content-' + tabName).classList.add('active');
+            const contentEl = document.getElementById('content-' + tabName);
+            if (contentEl) contentEl.classList.add('active');
 
             // Activate selected tab button
             const activeTab = document.getElementById('tab-' + tabName);
-            activeTab.classList.remove('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
-            activeTab.classList.add('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+            if (activeTab) {
+                activeTab.classList.remove('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
+                activeTab.classList.add('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+            }
         }
+
 
         function signUpForShift(shiftId) {
             // Replaces alert() with a temporary message box
@@ -512,6 +657,19 @@
                 messageDiv.remove();
             }, 3000);
         }
+
+        // Show a temporary message in the message box
+        function showMessage(message, type) {
+          const box = dom.messageBox;
+          box.textContent = message;
+          box.className = "p-4 mb-6 rounded-lg font-bold shadow-md";
+          if (type === "success") box.classList.add("bg-green-100", "border", "border-green-400", "text-green-700");
+          else if (type === "error") box.classList.add("bg-red-100", "border", "border-red-400", "text-red-700");
+          else if (type === "warning") box.classList.add("bg-yellow-100", "border", "border-yellow-400", "text-yellow-700");
+          box.classList.remove("hidden");
+          setTimeout(() => box.classList.add("hidden"), 7000);
+        }
+
 
         // Initialize to the Schedule Shifts tab on load
         window.onload = init;
