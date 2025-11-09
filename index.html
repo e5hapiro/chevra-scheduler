@@ -70,7 +70,29 @@
         }
     </style>
 </head>
+
+
 <body class="font-text antialiased">
+
+        <!-- Put near the top of your <body>, but inside the main content -->
+      <div id="loading-overlay" style="
+        display: none;
+        position: fixed;
+        top: 0; left: 0; width: 100vw; height: 100vh;
+        background: rgba(255,255,255,0.7);
+        z-index: 1000;
+        display: flex; align-items: center; justify-content: center;
+      ">
+        <div class="loader">
+          <!-- Simple spinner, use Tailwind or a GIF/SVG for style -->
+          <svg class="animate-spin h-10 w-10 text-brand-signup" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          <span class="ml-4 text-brand-text font-semibold">Signing you up...</span>
+        </div>
+      </div>
+
     <div class="h-full flex flex-col">
         
         <!-- Header (Design #2 Structure & Style) -->
@@ -91,220 +113,93 @@
             </div>
         </header>
 
-        <!-- Main Content -->
         <main class="flex-1 overflow-auto">
-            <div class="max-w-7xl mx-auto px-6 py-8">
-                
-                <!-- Tab Navigation (Design #2 Structure) -->
-                <div class="mb-6">
-                    <div class="flex gap-2 mb-0 border-b border-brand-shift-border">
-                        <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-button active px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-background text-brand-accent shadow-md">
-                            Schedule Shifts
-                        </button>
-                        <button onclick="switchTab('my-shifts')" id="tab-my-shifts" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
-                            My Shifts
-                        </button>
-                        <button onclick="switchTab('events')" id="tab-events" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
-                            Mortuary Information
-                        </button>
-                        <button onclick="switchTab('signups')" id="tab-signups" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
-                            Volunteer History
-                        </button>
+          <div class="max-w-7xl mx-auto px-6 py-8">
+            <!-- Tab Navigation -->
+            <div class="mb-6">
+              <div class="flex gap-2 mb-0 border-b border-brand-shift-border">
+                <!-- Tab buttons here (unchanged) -->
+                <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-button active px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-background text-brand-accent shadow-md">
+                  Schedule Shifts
+                </button>
+                <button onclick="switchTab('my-shifts')" id="tab-my-shifts" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
+                  My Shifts
+                </button>
+                <button onclick="switchTab('locations')" id="tab-locations" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
+                  Mortuary Information
+                </button>
+                <button onclick="switchTab('signups')" id="tab-signups" class="tab-button px-6 py-3 font-semibold rounded-t-lg transition-all bg-brand-info-bg text-brand-text/80 hover:bg-brand-background hover:text-brand-accent shadow-sm">
+                  Volunteer History
+                </button>
+              </div>
+
+              <!-- Tab Content Container -->
+              <div class="bg-brand-background rounded-lg shadow-md border border-t-0 border-brand-shift-border">
+                <div class="p-6">
+
+                  <!-- Schedule Shifts Tab -->
+                  <div id="content-schedule" class="tab-content">
+                    <div class="flex items-center justify-between mb-6">
+                      <h2 class="text-2xl font-bold font-headline text-brand-text">
+                        Available Shifts
+                      </h2>
+                      <button id="bulk-signup-btn"
+                        class="bg-brand-signup text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-brand-signup/90 disabled:opacity-50"
+                        onclick="performBulkSignup()" disabled>
+                        Sign Up for Selected Shifts
+                      </button>
                     </div>
-                    
-                    <!-- Tab Content Container -->
-                    <div class="bg-brand-background rounded-lg shadow-md border border-t-0 border-brand-shift-border">
+                    <!-- Loader -->
+                    <div id="available-shifts-loader" style="display:none;" class="p-6 text-center text-gray-500">Loading...</div>
+                    <!-- Available Shifts Grid -->
+                    <div class="grid gap-6" id="available-shifts-grid"></div>
+                  </div>
 
-                        <!-- Tab Content -->
-                        <div class="p-6">
-
-                            <!-- Schedule Shifts Tab -->
-                            <div id="content-schedule" class="tab-content active">
-                                <div class="flex items-center justify-between mb-6">
-                                    <h2 class="text-2xl font-bold font-headline text-brand-text">
-                                        Available Shifts
-                                    </h2>
-                                    <button id="bulk-signup-btn"
-                                        class="bg-brand-signup text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-brand-signup/90 disabled:opacity-50"
-                                        onclick="performBulkSignup()" disabled>
-                                        Sign Up for Selected Shifts
-                                    </button>
-                                </div>
-                                
-                                <!-- Available Shifts -->
-                                <div class="grid gap-6" id="available-shifts-grid"></div>
-                            </div>
-
-                            <!-- My Shifts Tab -->
-                            <div id="content-my-shifts" class="tab-content">
-                                <div class="flex items-center justify-between mb-6">
-                                    <h2 class="text-2xl font-bold font-headline text-brand-text">
-                                        My Shifts
-                                    </h2>
-                                    <button id="bulk-unselect-btn"
-                                        class="bg-red-500 text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-red-600 disabled:opacity-50"
-                                        onclick="performBulkUnselect()" disabled>
-                                        Remove Selected Shifts
-                                    </button>
-                                </div>
-                                <!-- User's currently signed-up shifts -->
-                                <div class="grid gap-6" id="selected-shifts-grid"></div>
-                            </div>
-
-
-                            <!-- Mortuary Information Tab (UPDATED) -->
-                            <div id="content-events" class="tab-content">
-                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Mortuary Information</h2>
-                                
-                                <div class="grid gap-6">
-                                    
-                                    <!-- Crist Mortuary Block - UPDATED STRUCTURE -->
-                                    <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
-                                        <!-- Header Section -->
-                                        <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
-                                            <h3 class="text-lg font-semibold text-brand-text">Crist Mortuary</h3>
-                                        </div>
-                                        <!-- Body Section -->
-                                        <div class="p-6 text-brand-text"> 
-                                            <div class="mb-4 opacity-90">
-                                                <p>3395 Penrose Place</p>
-                                                <p>Boulder, CO 80301</p>
-                                                <p class="mb-2">303-442-4411</p>
-                                                <a href="https://maps.google.com/?q=3395+Penrose+Place,+Boulder,+CO+80301" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
-                                                    📍 Get Directions
-                                                </a>
-                                            </div>
-                                            <!-- General Info -->
-                                            <p class="leading-relaxed">
-                                               ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
-                                            </p>
-                                        </div>
-                                    </div>
-
-                                    <!-- Greenwood & Myers Mortuary Block - UPDATED STRUCTURE -->
-                                    <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
-                                        <!-- Header Section -->
-                                        <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
-                                            <h3 class="text-lg font-semibold text-brand-text">Greenwood & Myers Mortuary</h3>
-                                        </div>
-                                        <!-- Body Section -->
-                                        <div class="p-6 text-brand-text">
-                                            <div class="mb-4 opacity-90">
-                                                <p>2969 Baseline Road</p>
-                                                <p>Boulder, CO 80303</p>
-                                                <p class="mb-2">(303) 440-3960</p>
-                                                <a href="https://maps.google.com/?q=2969+Baseline+Road,+Boulder,+CO+80303" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
-                                                    📍 Get Directions
-                                                </a>
-                                            </div>
-                                            <!-- General Info -->
-                                            <p class="leading-relaxed">
-                                                ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
-                                            </p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Volunteer History Tab - UPDATED CONTENT AND STRUCTURE -->
-                            <div id="content-signups" class="tab-content">
-                                <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Your Volunteer History</h2>
-                                
-                                <!-- Explanatory Note for YTD Focus -->
-                                <p class="text-sm text-brand-text/80 mb-6 p-4 rounded-lg bg-brand-info-bg border border-brand-shift-border">
-                                    Since a full historical year of data is not yet available, the statistics below focus on **Year-To-Date (YTD) 2025** figures. Once data for previous years is logged, this section will include a selector to view past historical trends.
-                                </p>
-                                
-                                <!-- Section 1: Your YTD Stats - Grid of 3 -->
-                                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                                    <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
-                                        <div class="text-3xl font-bold mb-1">47</div>
-                                        <div class="text-white opacity-90">2025 YTD Hours</div>
-                                    </div>
-                                    <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
-                                        <div class="text-3xl font-bold mb-1">156</div>
-                                        <div class="text-white opacity-90">2025 YTD Number of Different Shmira</div>
-                                    </div>
-                                    <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
-                                        <div class="text-3xl font-bold mb-1">85%</div>
-                                        <div class="text-white opacity-90">2025 Anything else</div>
-                                    </div>
-                                </div> 
-
-                                <!-- Section 2: Your Volunteer Stats by Year (Updated Header) -->
-                                <div class="mb-8 bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
-                                    <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
-                                        <h3 class="text-lg font-semibold text-brand-text">Your Volunteer Stats (2025 YTD)</h3>
-                                    </div>
-                                    <div class="p-6">
-                                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                            <div class="text-center">
-                                                <div class="text-2xl font-bold text-brand-accent">12</div>
-                                                <div class="text-brand-text">2025 Hours</div>
-                                            </div>
-                                            <div class="text-center">
-                                                <div class="text-2xl font-bold text-brand-accent">5</div>
-                                                <div class="text-brand-text">2025 Number of Different Shmira</div>
-                                            </div>
-                                            <div class="text-center">
-                                                <div class="text-2xl font-bold text-brand-accent">tbd</div>
-                                                <div class="text-brand-text">2025 Anything else</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <!-- Section 3: Boulder Chevra Kadisha Shmira Stats by Year (Updated Header) -->
-                                <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
-                                    <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
-                                        <h3 class="text-lg font-semibold text-brand-text">BCK Shmira Stats (2025 YTD)</h3>
-                                    </div>
-                                    <div class="p-6">
-                                        <div class="space-y-6">
-                                            <div>
-                                                <div class="flex justify-between items-center mb-2">
-                                                    <span class="font-medium text-brand-text">2025 YTD Total BCK Requested Shifts</span>
-                                                    <span class="text-sm text-brand-text/70">2025 YTD Total BCK Filled Shifts</span>
-                                                </div>
-                                                <div class="w-full bg-gray-200 rounded-full h-3">
-                                                    <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
-                                                </div>
-                                                <div class="text-sm text-brand-text/70 mt-1">2025 YTD % Shifts Filled</div>
-                                            </div>
-                                            
-                                            <div>
-                                                <div class="flex justify-between items-center mb-2">
-                                                    <span class="font-medium text-brand-text">Community Fair</span>
-                                                    <span class="text-sm text-brand-text/70">18/25 shifts filled</span>
-                                                </div>
-                                                <div class="w-full bg-gray-200 rounded-full h-3">
-                                                    <div class="bg-brand-signup h-3 rounded-full" style="width: 72%"></div>
-                                                </div>
-                                                <div class="text-sm text-brand-text/70 mt-1">72% complete</div>
-                                            </div>
-                                            
-                                            <div>
-                                                <div class="flex justify-between items-center mb-2">
-                                                    <span class="font-medium text-brand-text">Beach Cleanup</span>
-                                                    <span class="text-sm text-brand-text/70">8/10 shifts filled</span>
-                                                </div>
-                                                <div class="w-full bg-gray-200 rounded-full h-3">
-                                                    <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
-                                                </div>
-                                                <div class="text-sm text-brand-text/70 mt-1">80% complete</div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                  <!-- My Shifts Tab -->
+                  <div id="content-my-shifts" class="tab-content">
+                    <div class="flex items-center justify-between mb-6">
+                      <h2 class="text-2xl font-bold font-headline text-brand-text">
+                        My Shifts
+                      </h2>
+                      <button id="bulk-unselect-btn"
+                        class="bg-red-500 text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-red-600 disabled:opacity-50"
+                        onclick="performBulkUnselect()" disabled>
+                        Remove Selected Shifts
+                      </button>
                     </div>
+                    <div id="my-shifts-loader" style="display:none;" class="p-6 text-center text-gray-500">Loading...</div>
+                    <div class="grid gap-6" id="selected-shifts-grid"></div>
+                  </div>
+
+                  <!-- Mortuary Location Information Tab -->
+                  <div id="content-locations" class="tab-content">
+                    <div id="locations-loader" style="display:none;" class="p-6 text-center text-gray-500">Loading...</div>
+                    <div class="grid gap-6" id="locations-info-grid"></div>
+                  </div>
+
+                  <!-- Volunteer History Tab -->
+                  <div id="content-signups" class="tab-content">
+                    <div id="signups-loader" style="display:none;" class="p-6 text-center text-gray-500">Loading...</div>
+                    <div id="volunteer-history-grid"></div>
+                  </div>
+
+
                 </div>
+              </div>
             </div>
+          </div>
         </main>
-    </div>
+
 
     <script>
+
+        // Global variable to cache server side function return data
+        let tableName = null;
+        let cacheVolunteerData = null;
+        let cacheAvailableShifts = null;
+        let cacheMyShifts = null;
+        let cacheLocations = null;
+        let cacheVolunteerHistory = null;
 
         // Global set to track selected shifts
         var selectedShiftIds = new Set();
@@ -317,47 +212,208 @@
 
         function init() {
 
+          
+          // retrieve data passed by server side DoGo() function
+          const data = JSON.parse(<?= data ?>);
 
-            // Parse JSON string injected by server-side templating
-            const data = JSON.parse(<?= data ?>);
+          // store the Volunteer data in a global cache function
+          // TBD - eliminate passing this data on each server call.
+          cacheVolunteerData = {
+            "name" : data.name,
+            "token" : data.token,
+            "isMember" : data.isMember
+          };
+   
+          //          
+          console.log("index.html init launched. Volunteer Data received:" + JSON.stringify(cacheVolunteerData));
 
-            // Debug: log the entire events array first
-            console.log('Data object:', data);
+          // kept temporarily
+          volunteerName = data.name;
+          volunteerToken = data.token;
+          isMember = data.isMember;
 
-            // Setting Form parameters
-            volunteerName = data.name;
-            volunteerToken = data.token;
-            isMember = data.isMember;
-            events = data.events;
-            selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
+          const welcomeMessage = document.getElementById('welcome-message');
+          if (welcomeMessage && volunteerName) {
+            welcomeMessage.textContent = "Welcome, " + volunteerName;
+          }
 
-            // Debug: log the entire events array first
-            console.log('Events object:', events);
+          hideLoading(); // Hides the loading indicator so it can be called later when loading data.
+          switchTab('schedule'); // load first tab data
+        }
 
-            /*
-            console.log("starting script init function");
-            console.log("script volunteerName:", volunteerName);
-            console.log("script volunteerToken:", volunteerToken);
-            */
-
-            // Display the welcome message and displaying the volunteer name
-            const welcomeMessage = document.getElementById('welcome-message');
-            if (welcomeMessage && volunteerName) {
-                welcomeMessage.textContent = "Welcome, " + volunteerName;
-            }
-
-            // Generate the Shifts Table
-            renderAvailableShifts(events);
-            renderSelectedShifts(events);
-
-            switchTab('schedule');
+        function showScheduleLoader() {
+          var loader = document.getElementById('available-shifts-loader');
+          var grid = document.getElementById('available-shifts-grid');
+          if (!loader || !grid) {
+            console.error("Loader or grid not found!", { loader, grid });
+            return;
+          }
+          loader.style.display = '';
+          grid.style.display = 'none';
+        }
+        function hideScheduleLoader() {
+          var loader = document.getElementById('available-shifts-loader');
+          var grid = document.getElementById('available-shifts-grid');
+          if (!loader || !grid) {
+            console.error("Loader or grid not found!", { loader, grid });
+            return;
+          }
+          loader.style.display = 'none';
+          grid.style.display = '';
         }
 
 
+        // My Shifts (tab: my-shifts)
+        function showMyShiftsLoader() {
+          console.log("entering showMyShiftsLoader ");
+          document.getElementById('my-shifts-loader').style.display = '';
+          document.getElementById('selected-shifts-grid').style.display = 'none';
+        }
+        function hideMyShiftsLoader() {
+          console.log("entering hideMyShiftsLoader ");
+          document.getElementById('my-shifts-loader').style.display = 'none';
+          document.getElementById('selected-shifts-grid').style.display = '';
+        }
+
+        // Locations (tab: locations)
+        function showLocationsLoader() {
+          document.getElementById('locations-loader').style.display = '';
+          document.getElementById('locations-info-grid').style.display = 'none';
+        }
+        function hideLocationsLoader() {
+          document.getElementById('locations-loader').style.display = 'none';
+          document.getElementById('locations-info-grid').style.display = '';
+        }
+
+        // Volunteer History (tab: signups)
+        function showSignupsLoader() {
+          document.getElementById('signups-loader').style.display = '';
+          document.getElementById('volunteer-history-grid').style.display = 'none';
+        }
+        function hideSignupsLoader() {
+          document.getElementById('signups-loader').style.display = 'none';
+          document.getElementById('volunteer-history-grid').style.display = '';
+        }
+
+
+        /**
+         * A map of function names (strings) to the actual function objects.
+         * This is the secure way to perform dynamic function calls (Dynamic Dispatch).
+         */
+        const HANDLER_FUNCTIONS = {
+          // Key (the string name) : Value (the actual function to call)
+          "getAvailableShifts": successGetAvailableShifts,
+          "getMyShifts": successGetMyShifts,
+          "getLocations" : successGetLocations,
+          "getVolunteerHistory" : successGetVolunteerHistory,
+          "setVolunteerShifts": successSetVolunteerShifts,
+          "removeVolunteerShifts" : successRemoveVolunteerShifts
+        };
+
+        // Map server function parameters to functions
+        const serverFunctionParams = {
+          getAvailableShifts: () => [volunteerToken, isMember, false],
+          getMyShifts: () => [volunteerToken, isMember, false],
+          getLocations: () => [],
+          getVolunteerHistory: () => [volunteerToken],
+          setVolunteerShifts: ids => [ids, volunteerToken],
+          removeVolunteerShifts: ids => [ids, volunteerToken]
+        };
+
+        function switchTab(tabName) {
+          tableName = tabName; // Create a global variable for the users current state
+          console.log("== switchTab called ==");
+
+          // Hide all tab contents and deactivate tab buttons
+          document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+          document.querySelectorAll('.tab-button').forEach(b => {
+            b.classList.remove('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+            b.classList.add('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
+          });
+
+          // Activate selected tab button
+          const activeTab = document.getElementById('tab-' + tabName);
+          if (activeTab) {
+            activeTab.classList.remove('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
+            activeTab.classList.add('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+          }
+
+          // Show loading message while fetching data
+          const tabContent = document.getElementById('content-' + tabName);
+
+          if (!tabContent) return;
+          tabContent.classList.add('active');
+          if(tabName === 'schedule') showScheduleLoader();
+          if(tabName === 'my-shifts') showMyShiftsLoader();
+          if(tabName === 'locations') showLocationsLoader();
+          if(tabName === 'signups') showSignupsLoader();
+
+          // Define mapping from tab names to your server-side function names
+          const serverFunctionMap = {
+            'schedule': 'getAvailableShifts',
+            'my-shifts': 'getMyShifts',
+            'locations': 'getLocations',
+            'signups': 'getVolunteerHistory'
+          };
+
+          // Define a map from tab to client-side data handler functions 
+          const clientRendererMap = {
+            'schedule': renderAvailableShifts,
+            'my-shifts': renderSelectedShifts,
+            'locations': renderLocations,            
+            'signups': renderVolunteerHistory 
+          };
+
+          const serverFunctionName = serverFunctionMap[tabName];
+          const clientRenderFunction = clientRendererMap[tabName];
+
+          if (!serverFunctionName || !clientRenderFunction) {
+            console.error(`No server function or render function defined for tab: ${tabName}`);
+            tabContent.innerHTML = '<p class="p-6 text-center text-red-500">Error loading tab content.</p>';
+            return;
+          }
+
+          // Call server function with callServerFunction helper
+          const paramFn = serverFunctionParams[serverFunctionName];
+          if (!paramFn) {
+            throw new Error("Parameters map not found for: " + serverFunctionName);
+          }
+          // ensure that the right parameters are passed
+          const params = paramFn(); // returns an array of parameters
+          callServerFunction(serverFunctionName, ...params);
+
+          // In your server success handler for each tab:
+          HANDLER_FUNCTIONS[serverFunctionName] = function(data) {
+            if (serverFunctionName === 'getAvailableShifts') cacheAvailableShifts = data;
+            if (serverFunctionName === 'getMyShifts')       cacheMyShifts = data;
+            if (serverFunctionName === 'getLocations')      cacheLocations = data;
+            if (serverFunctionName === 'getVolunteerHistory') cacheVolunteerHistory = data;
+            clientRenderFunction(data);
+            };
+        }
+        
+        window.switchTab = switchTab; // <-- THIS ENSURES GLOBAL SCOPE
+
+        function refreshTab() {
+          const tabName = tableName;
+          if (tabName === 'schedule' && cacheAvailableShifts) {
+            renderAvailableShifts(cacheAvailableShifts);
+          } else if (tabName === 'my-shifts' && cacheMyShifts) {
+            renderSelectedShifts(cacheMyShifts);
+          } else if (tabName === 'locations' && cacheLocations) {
+            renderLocations(cacheLocations);
+          } else if (tabName === 'signups' && cacheVolunteerHistory) {
+            renderVolunteerHistory(cacheVolunteerHistory);
+          } else {
+            // No cache or forced refresh, so call the server
+            switchTab(tabName);
+          }
+        }
 
         function callServerFunction(functionName, parameter1, parameter2, parameter3) {
           google.script.run
             .withSuccessHandler(function(response) {
+              console.log("success handler" + functionName);
               serverFunctionSuccessHandler(functionName, response)
             })
             .withFailureHandler(function(error) {
@@ -366,17 +422,6 @@
             })
             .serverSideFunctionHandler(functionName, parameter1, parameter2, parameter3);
         }
-
-        /**
-         * A map of function names (strings) to the actual function objects.
-         * This is the secure way to perform dynamic function calls (Dynamic Dispatch).
-         */
-        const HANDLER_FUNCTIONS = {
-          // Key (the string name) : Value (the actual function to call)
-          "updateVolunteerShifts": successUpdateVolunteerShifts,
-          "removeVolunteerShifts" : successRemoveVolunteerShifts
-
-        };
 
         function serverFunctionSuccessHandler(functionName, response){
             console.log(`Success calling ${functionName}:`, response);
@@ -395,20 +440,105 @@
 
         }
 
+        function successGetAvailableShifts(response) {
+            //showMessage("Thank you. Found Available Shifts", "success");
+            console.log(`Thank you. Found Available Shifts`);
+            data = response;
 
-        function successUpdateVolunteerShifts(response){
-            showMessage("Thank you. Volunteer Shifts added", "success");
-            console.error(`Thank you. Volunteer Shifts added`);
+            // Debug: log the entire events array first
+            console.log('Data object:', data);
+
+            // Setting Form parameters
+            volunteerName = data.name;
+            volunteerToken = data.token;
+            isMember = data.isMember;
+            events = data.events;
+            selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
+            
+           
+        }
+
+        function successGetMyShifts(response) {
+            //showMessage("Thank you. Found Selected Shifts", "success");
+            console.log(`Thank you. Found Selected Shifts`);
+            data = response;
+
+            // Debug: log the entire events array first
+            console.log('Data object:', data);
+
+            // Setting Form parameters
+            volunteerName = data.name;
+            volunteerToken = data.token;
+            isMember = data.isMember;
+            events = data.events;
+            selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
+
+            console.log(JSON.stringify(selectedEvents));
+                     
+        }
+
+        function successGetLocations(response) {
+            //showMessage("Thank you. Found Locations", "success");
+            console.log(`Thank you. Found Locations`);
+          
+        }
+
+        function successGetVolunteerHistory(response) {
+            //showMessage("Thank you. Found History", "success");
+            console.log(`Thank you. Found History`);
+          
+        }
+
+        function successSetVolunteerShifts(response){
+            //showMessage("Thank you. Volunteer Shifts added", "success");
+            console.log(`Thank you. Volunteer Shifts added`);
+            hideLoading()
+            switchTab(tableName);
         }
 
         function successRemoveVolunteerShifts(response){
-            showMessage("Thank you. Volunteer Shifts removed", "success");
-            console.error(`Thank you. Volunteer Shifts removed`);
+            // showMessage("Thank you. Volunteer Shifts removed", "success");
+            console.log(`Thank you. Volunteer Shifts removed`);
+            hideLoading()
+            switchTab(tableName);
         }
 
 
-        function renderAvailableShifts(events) {
+        function renderAvailableShifts(data) {
+
+          hideScheduleLoader();
+
+          console.log("== calling renderAvailableShifts ==");
+
+          if (!data) {
+            console.error("no data passed to renderAvailableShifts ", document.querySelector('.tab-content.active'));
+            return;
+          }
+
+          const events = data.events;
+
+          if (!events) {
+            console.error("no events passed to renderAvailableShifts ", document.querySelector('.tab-content.active'));
+            return;
+          }
+
+          /*
+          console.log('---- DEBUG available-shifts-grid ----');
+          console.log('HTML at call:', document.getElementById('content-schedule')?.innerHTML);
+          console.log('getElementById:', document.getElementById('available-shifts-grid'));
+          console.log('document.querySelectorAll(\'#available-shifts-grid\').length:', document.querySelectorAll('#available-shifts-grid').length);
+          */
+
+          
             const shiftsContainer = document.getElementById('available-shifts-grid');
+
+            if (!shiftsContainer) {
+              console.error("available-shifts-grid container not found. Tab active?", document.querySelector('.tab-content.active'));
+              return;
+            }
+
+
+
             shiftsContainer.innerHTML = '';
 
             events.forEach((event, idx) => {
@@ -455,13 +585,24 @@
             updateBulkSignupButtonState();
         }
 
-        function renderSelectedShifts(selectedEvents) {
+
+        function renderSelectedShifts(data) {
+          hideMyShiftsLoader();
+          console.log("== calling renderSelectedShifts ==");
+          selectedEvents = data.events
+
+
             const shiftsContainer = document.getElementById('selected-shifts-grid');
+
+            if (!shiftsContainer) {
+              console.error("selected-shifts-grid container not found. Tab active?", document.querySelector('.tab-content.active'));
+              return;
+            }
+
             shiftsContainer.innerHTML = '';
 
             // Only render events with at least one selected shift
             selectedEvents
-                .filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
                 .forEach((event, idx) => {
                     let eventHTML = `
                         <div class="border rounded-xl p-6 mb-6" style="background-color: #eef3f9;">
@@ -503,13 +644,150 @@
         }
 
 
+
+        function renderLocations() {
+        console.log("== calling renderLocations ==");
+
+          const container = document.getElementById('content-locations');
+          container.innerHTML = `
+            <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Mortuary Information</h2>
+            <div class="grid gap-6">
+              <!-- Crist Mortuary Block -->
+              <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+                <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                  <h3 class="text-lg font-semibold text-brand-text">Crist Mortuary</h3>
+                </div>
+                <div class="p-6 text-brand-text"> 
+                  <div class="mb-4 opacity-90">
+                    <p>3395 Penrose Place</p>
+                    <p>Boulder, CO 80301</p>
+                    <p class="mb-2">303-442-4411</p>
+                    <a href="https://maps.google.com/?q=3395+Penrose+Place,+Boulder,+CO+80301" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
+                      📍 Get Directions
+                    </a>
+                  </div>
+                  <p class="leading-relaxed">
+                    ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
+                  </p>
+                </div>
+              </div>
+
+              <!-- Greenwood & Myers Mortuary Block -->
+              <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+                <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                  <h3 class="text-lg font-semibold text-brand-text">Greenwood & Myers Mortuary</h3>
+                </div>
+                <div class="p-6 text-brand-text">
+                  <div class="mb-4 opacity-90">
+                    <p>2969 Baseline Road</p>
+                    <p>Boulder, CO 80303</p>
+                    <p class="mb-2">(303) 440-3960</p>
+                    <a href="https://maps.google.com/?q=2969+Baseline+Road,+Boulder,+CO+80303" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
+                      📍 Get Directions
+                    </a>
+                  </div>
+                  <p class="leading-relaxed">
+                    ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
+                  </p>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
+        function renderVolunteerHistory() {
+        console.log("== calling renderVolunteerHistory ==");
+
+          const container = document.getElementById('content-signups');
+          container.innerHTML = `
+            <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Your Volunteer History</h2>
+            <p class="text-sm text-brand-text/80 mb-6 p-4 rounded-lg bg-brand-info-bg border border-brand-shift-border">
+              Since a full historical year of data is not yet available, the statistics below focus on <strong>Year-To-Date (YTD) 2025</strong> figures. Once data for previous years is logged, this section will include a selector to view past historical trends.
+            </p>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+              <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+                <div class="text-3xl font-bold mb-1">47</div>
+                <div class="text-white opacity-90">2025 YTD Hours</div>
+              </div>
+              <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+                <div class="text-3xl font-bold mb-1">156</div>
+                <div class="text-white opacity-90">2025 YTD Number of Different Shmira</div>
+              </div>
+              <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+                <div class="text-3xl font-bold mb-1">85%</div>
+                <div class="text-white opacity-90">2025 Anything else</div>
+              </div>
+            </div>
+            <div class="mb-8 bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+              <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                <h3 class="text-lg font-semibold text-brand-text">Your Volunteer Stats (2025 YTD)</h3>
+              </div>
+              <div class="p-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div class="text-center">
+                    <div class="text-2xl font-bold text-brand-accent">12</div>
+                    <div class="text-brand-text">2025 Hours</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-2xl font-bold text-brand-accent">5</div>
+                    <div class="text-brand-text">2025 Number of Different Shmira</div>
+                  </div>
+                  <div class="text-center">
+                    <div class="text-2xl font-bold text-brand-accent">tbd</div>
+                    <div class="text-brand-text">2025 Anything else</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+              <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+                <h3 class="text-lg font-semibold text-brand-text">BCK Shmira Stats (2025 YTD)</h3>
+              </div>
+              <div class="p-6">
+                <div class="space-y-6">
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="font-medium text-brand-text">2025 YTD Total BCK Requested Shifts</span>
+                      <span class="text-sm text-brand-text/70">2025 YTD Total BCK Filled Shifts</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                      <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
+                    </div>
+                    <div class="text-sm text-brand-text/70 mt-1">2025 YTD % Shifts Filled</div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="font-medium text-brand-text">Community Fair</span>
+                      <span class="text-sm text-brand-text/70">18/25 shifts filled</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                      <div class="bg-brand-signup h-3 rounded-full" style="width: 72%"></div>
+                    </div>
+                    <div class="text-sm text-brand-text/70 mt-1">72% complete</div>
+                  </div>
+                  <div>
+                    <div class="flex justify-between items-center mb-2">
+                      <span class="font-medium text-brand-text">Beach Cleanup</span>
+                      <span class="text-sm text-brand-text/70">8/10 shifts filled</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-3">
+                      <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
+                    </div>
+                    <div class="text-sm text-brand-text/70 mt-1">80% complete</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
+
         function toggleShiftUnselect(shiftId) {
             if (selectedUnselectIds.has(shiftId)) {
                 selectedUnselectIds.delete(shiftId);
             } else {
                 selectedUnselectIds.add(shiftId);
             }
-            renderSelectedShifts(selectedEvents); // assumes you have selectedEvents in global context
+            refreshTab();
             updateBulkUnselectButtonState();
         }
 
@@ -523,7 +801,7 @@
             } else {
                 selectedShiftIds.add(shiftId);
             }
-            renderAvailableShifts(events); // 'events' should be your current displayed events array
+            refreshTab();
             updateBulkSignupButtonState();
         }
 
@@ -533,27 +811,34 @@
         }
 
         function performBulkSignup() {
-//            closeBulkModal && closeBulkModal(); // If modal present
-//            dom.loading.classList.remove("hidden");
+            showLoading();
             const ids = Array.from(selectedShiftIds);
             if (ids.length === 0) {
-                showMessage("No shifts were selected for bulk signup.", "warning");
-//                dom.loading.classList.add("hidden");
-                return;
+              hideLoading();
+              return;
             }
             handleBulkShiftSignup(ids);
 
         }
 
         function performBulkUnselect() {
+            showLoading();
             const ids = Array.from(selectedUnselectIds);
             if (ids.length === 0) {
-                showMessage("No shifts were selected for bulk removal.", "warning");
-//                dom.loading.classList.add("hidden");
-                return;
+              hideLoading();
+              return;
             }
             handleBulkShiftUnselect(ids);
         }
+
+        function showLoading() {
+          document.getElementById('loading-overlay').style.display = 'flex';
+        }
+        function hideLoading() {
+          document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+
 
 
         function handleBulkSignupResponse() {
@@ -563,7 +848,7 @@
         function handleBulkShiftSignup(selectedShiftIds) {
             console.log ("got here - handleBulkShiftSignup")
             console.log (selectedShiftIds) ;
-            callServerFunction("updateVolunteerShifts", selectedShiftIds, volunteerName, volunteerToken);
+            callServerFunction("setVolunteerShifts", selectedShiftIds, volunteerName, volunteerToken);
         }
 
         function handleBulkShiftUnselect (shiftIds) {
@@ -575,35 +860,10 @@
         // Server error handler
         function handleServerError(error) {
 //          dom.loading.classList.add("hidden");
-          showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
+          //showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
           console.error("Client-side error from server call:", error.message);
         }
 
-        function switchTab(tabName) {
-            // Hide all tab contents
-            const contents = document.querySelectorAll('.tab-content');
-            contents.forEach(content => {
-                content.classList.remove('active');
-            });
-
-            // Deactivate all tab buttons
-            const tabs = document.querySelectorAll('.tab-button');
-            tabs.forEach(tab => {
-                tab.classList.remove('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
-                tab.classList.add('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
-            });
-
-            // Show selected tab content
-            const contentEl = document.getElementById('content-' + tabName);
-            if (contentEl) contentEl.classList.add('active');
-
-            // Activate selected tab button
-            const activeTab = document.getElementById('tab-' + tabName);
-            if (activeTab) {
-                activeTab.classList.remove('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
-                activeTab.classList.add('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
-            }
-        }
 
 
         function signUpForShift(shiftId) {

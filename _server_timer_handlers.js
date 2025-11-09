@@ -1,7 +1,8 @@
 /**
 * -----------------------------------------------------------------
-* _common_functions.js
+* server_timed_functions.js
 * Chevra Kadisha Shifts Scheduler
+* Timed functions are called by a server side timer and run as batch jobs performing time sensitive functions
 * Common functions for Google Apps Script (suitable for Google Forms/Sheets integrations)
 * -----------------------------------------------------------------
 * _common_functions.js
@@ -27,40 +28,6 @@
 function triggeredFunction() {
   bckLib.updateShiftsAndEventMap(setConfigProperties());
 }
-
-/**
- * A map of function names (strings) to the actual function objects.
- * This is the secure way to perform dynamic function calls (Dynamic Dispatch).
- */
-const HANDLER_FUNCTIONS = {
-  // Key (the string name) : Value (the actual function to call)
-  "updateVolunteerShifts": updateVolunteerShifts,
-  "removeVolunteerShifts" : removeVolunteerShifts
-};
-
-function serverSideFunctionHandler(functionName, parameter1, parameter2, parameter3) {
-  // 1. Get configuration
-  const configParameters = setConfigProperties();
-  
-  // 2. Look up the function in the secure map
-  const targetFunction = HANDLER_FUNCTIONS[functionName];
-
-  // 3. Check if the function exists in the map
-  if (typeof targetFunction === 'function') {
-    // 4. Securely call the function with the parameters
-    return targetFunction(configParameters, parameter1, parameter2, parameter3);
-  } else {
-    // 5. Handle the case where the function name is unknown
-    console.error(`Unknown function name requested: ${functionName}`);
-    return { success: false, message: `Function '${functionName}' not found.` };
-  }
-}
-
-// --- Example of how the inner function might look (assuming it exists) ---
-// function updateVolunteerShifts(config, shiftIds, name, token) {
-//   // ... logic to update shifts ...
-//   return { success: true, data: "Shift updated successfully" }; // It should return a result
-// }
 
 
 /**
@@ -294,5 +261,67 @@ function formatShortDate(epochTime) {
   const dateOfMonth = date.getDate();
   const year = date.getFullYear();
   return `${dayName} ${month}/${dateOfMonth}/${year}`;
+}
+
+
+
+/**
+ * TBD there is no trigger for this function
+ * Sends a confirmation email to the volunteer.
+ * @param {string} recipientEmail - The volunteer's email address.
+ * @param {object} shift - Object containing shift details (eventName, eventLocation, eventDate, shiftTime).
+ * @param {string} actionType - 'Signup' or 'Drop'.
+ * @param {string} volunteerName - The name of the volunteer.
+ * @param {string} volunteerUrl - The volunteer's unique portal URL.
+ */
+/**
+ * Sends a confirmation email to the volunteer.
+ * @param {string} recipientEmail - The volunteer's email address.
+ * @param {object} shift - Object containing shift details (eventName, eventLocation, eventDate, shiftTime).
+ * @param {string} actionType - 'Signup' or 'Drop'.
+ * @param {string} volunteerName - The name of the volunteer.
+ * @param {string} volunteerUrl - The volunteer's unique portal URL.
+ */
+function sendShiftEmail(recipientEmail, shift, actionType, volunteerName, volunteerUrl) {
+  const subject = `Shift ${actionType} Confirmation: ${shift.eventName}`;
+  
+  // Look up the full address for the email body
+  const fullAddress = getAddressFromLocationName_(shift.eventLocation);
+  
+  const body = `
+    Dear ${volunteerName},
+
+    This is an automatic confirmation that your request to ${actionType.toLowerCase()} the following shift has been processed successfully:
+
+    Shift Details:
+    - Event: ${shift.eventName}
+    - Location: ${shift.eventLocation}
+    - Address: ${fullAddress}
+    - Date: ${shift.eventDate}
+    - Time: ${shift.shiftTime}
+
+    If you need to cancel or change your confirmation. Go to Your Volunteer Portal Link: ${volunteerUrl}. Remember, this link is unique to you. Please do not share it.
+    
+    Thank you for providing this mitzvah.
+
+    
+  `;
+
+  try {
+    // Check if the recipient email is valid (basic check)
+    if (!recipientEmail || !String(recipientEmail).includes('@')) {
+       Logger.log(`Skipping email: Invalid recipient email address: ${recipientEmail}`);
+       return;
+    }
+    
+    MailApp.sendEmail({
+      to: recipientEmail,
+      subject: subject,
+      body: body
+    });
+    Logger.log(`Email sent successfully for ${actionType} to ${recipientEmail}`);
+  } catch (e) {
+    Logger.log(`ERROR sending email for ${actionType}: ${e.toString()}`);
+  }
 }
 

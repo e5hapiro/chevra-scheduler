@@ -1,3 +1,4 @@
+
 /**
 * -----------------------------------------------------------------
 * _webPortalInit.js
@@ -15,7 +16,19 @@
  *   - Added HTML template creation.
  *   - Added error handling and logging.
  *   - Added logging and error handling.
- * Web Portal Initialization
+ *   - Initial implementation of processFormSubmit.
+ *   - Added logging and error handling.
+ *   - Added token generation and addition.
+ *   - Added form updated detection.
+ *   - Added date parsing and validation.
+ *   - Added shift creation.
+ *   - Added shift synchronization to the Shifts Master sheet.
+ *   - Added notification email sending.
+ *   - Added volunteer contact information retrieval.
+ *   - Added error handling and logging.
+ *   - Added logging and error handling.
+ * 
+ * Web Portal Initialization and Submit Handler
  * -----------------------------------------------------------------
  */
 /**
@@ -109,5 +122,21 @@ function doGet(e) {
     return HtmlService.createHtmlOutput('<h1>Fatal App Error</h1><p>The system failed to load the interface. Please contact support. (Check Logs for FATAL ERROR in doGet)</p>');
   }
 }
+
+
+/**
+ * Handles the 'On form submit' trigger from the administrator's event form.
+ * This function processes the form response and updates the Shifts Master sheet.
+ * @param {GoogleAppsScript.Events.SheetsOnFormSubmit} e The form submit event object.
+ */
+function processFormSubmit(e) {
+
+  Logger.log("Processing form submit");
+  // Force updates
+  bckLib.addToken(e, TOKEN_COLUMN_NUMBER)
+  bckLib.updateShiftsAndEventMap();
+
+}
+
 
 
