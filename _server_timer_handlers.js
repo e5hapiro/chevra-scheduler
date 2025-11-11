@@ -1,6 +1,6 @@
 /**
 * -----------------------------------------------------------------
-* server_timed_functions.js
+* server_timer_functions.js
 * Chevra Kadisha Shifts Scheduler
 * Timed functions are called by a server side timer and run as batch jobs performing time sensitive functions
 * Common functions for Google Apps Script (suitable for Google Forms/Sheets integrations)
@@ -265,63 +265,4 @@ function formatShortDate(epochTime) {
 
 
 
-/**
- * TBD there is no trigger for this function
- * Sends a confirmation email to the volunteer.
- * @param {string} recipientEmail - The volunteer's email address.
- * @param {object} shift - Object containing shift details (eventName, eventLocation, eventDate, shiftTime).
- * @param {string} actionType - 'Signup' or 'Drop'.
- * @param {string} volunteerName - The name of the volunteer.
- * @param {string} volunteerUrl - The volunteer's unique portal URL.
- */
-/**
- * Sends a confirmation email to the volunteer.
- * @param {string} recipientEmail - The volunteer's email address.
- * @param {object} shift - Object containing shift details (eventName, eventLocation, eventDate, shiftTime).
- * @param {string} actionType - 'Signup' or 'Drop'.
- * @param {string} volunteerName - The name of the volunteer.
- * @param {string} volunteerUrl - The volunteer's unique portal URL.
- */
-function sendShiftEmail(recipientEmail, shift, actionType, volunteerName, volunteerUrl) {
-  const subject = `Shift ${actionType} Confirmation: ${shift.eventName}`;
-  
-  // Look up the full address for the email body
-  const fullAddress = getAddressFromLocationName_(shift.eventLocation);
-  
-  const body = `
-    Dear ${volunteerName},
-
-    This is an automatic confirmation that your request to ${actionType.toLowerCase()} the following shift has been processed successfully:
-
-    Shift Details:
-    - Event: ${shift.eventName}
-    - Location: ${shift.eventLocation}
-    - Address: ${fullAddress}
-    - Date: ${shift.eventDate}
-    - Time: ${shift.shiftTime}
-
-    If you need to cancel or change your confirmation. Go to Your Volunteer Portal Link: ${volunteerUrl}. Remember, this link is unique to you. Please do not share it.
-    
-    Thank you for providing this mitzvah.
-
-    
-  `;
-
-  try {
-    // Check if the recipient email is valid (basic check)
-    if (!recipientEmail || !String(recipientEmail).includes('@')) {
-       Logger.log(`Skipping email: Invalid recipient email address: ${recipientEmail}`);
-       return;
-    }
-    
-    MailApp.sendEmail({
-      to: recipientEmail,
-      subject: subject,
-      body: body
-    });
-    Logger.log(`Email sent successfully for ${actionType} to ${recipientEmail}`);
-  } catch (e) {
-    Logger.log(`ERROR sending email for ${actionType}: ${e.toString()}`);
-  }
-}
 

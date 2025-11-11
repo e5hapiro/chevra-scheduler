@@ -1,6 +1,6 @@
 /**
 * -----------------------------------------------------------------
-* globals.js
+* _globals.js
 * Chevra Kadisha Shifts Scheduler
 * Global constants and variables
 * -----------------------------------------------------------------
@@ -42,6 +42,15 @@ const GUESTS_SHEET = 'Guests';
 const MEMBERS_SHEET = 'Members';
 const EVENT_MAP = 'Event Map';
 const ARCHIVE_EVENT_MAP = 'Archive Event Map';
+
+// Used to get specific types of shifts in event information
+const SHIFT_FLAGS = {
+  NONE: 0,
+  AVAILABLE: 1,
+  SELECTED: 2,
+  EVENT: 4,
+};
+
 
 // Column Indices (0-based) for SHIFTS_MASTER_SHEET
 const SHIFT_ID_COL = 0;

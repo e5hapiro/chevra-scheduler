@@ -64,26 +64,16 @@ function serverSideFunctionHandler(functionName, parameter1, parameter2, paramet
 
 }
 
-function supplementGetAvailableShifts(volunteerToken, isMember, nameOnly) {
-  Logger.log("GetAvailableShifts-volunteerToken:"+ volunteerToken)
-  volunteerData = getAvailableShifts(setConfigProperties(), volunteerToken, isMember, nameOnly)
-
-  // ... existing logic ...
-  response =  cleanForReturn(volunteerData);
- 
-
-  Logger.log("supplementGetAvailableShifts-response:"+ JSON.stringify(response))
-  return response;
-}
-
 function cleanForReturn(obj) {
-  if (Array.isArray(obj)) {
+  if (obj instanceof Date) {
+    return obj.toISOString(); // Convert Date to string
+  } else if (Array.isArray(obj)) {
     return obj.map(cleanForReturn);
   } else if (obj && typeof obj === 'object') {
     const clean = {};
     for (var k in obj) {
       if (obj.hasOwnProperty(k)) {
-        if (obj[k] === null) clean[k] = []; // Or "" or suitable fallback
+        if (obj[k] === null) clean[k] = [];
         else clean[k] = cleanForReturn(obj[k]);
       }
     }
@@ -92,117 +82,28 @@ function cleanForReturn(obj) {
   return obj;
 }
 
+/**
+ * Server-side stub to get available shifts data for "Schedule Shifts" tab.
+ */
+function getAvailableShifts(sheetInputs, volunteerToken, isMember) {
+  // Fetch and return available shifts data filtered or personalized as needed by volunteerToken
+  // Example return format: Array of event objects with availableShifts arrays
+  const nameOnly = false;
+  return cleanForReturn(bckLib.getShifts(sheetInputs, volunteerToken, isMember, SHIFT_FLAGS.AVAILABLE, nameOnly)); 
+
+}
 
 /**
  * Server-side stub to get available shifts data for "Schedule Shifts" tab.
  */
-function getAvailableShifts(sheetInputs, volunteerToken, isMember, nameOnly) {
+function getMyShifts(sheetInputs, volunteerToken, isMember) {
   // Fetch and return available shifts data filtered or personalized as needed by volunteerToken
   // Example return format: Array of event objects with availableShifts arrays
-
-  try {
-
-    console.log("--- START getAvailableShifts ---");
-    console.log("GetAvailableShifts-volunteerToken:"+ volunteerToken)
-
-    var info = null;
-    var volunteerData = null;
-
-    if (isMember) {
-
-      info = bckLib.getMemberInfoByToken(sheetInputs, volunteerToken, nameOnly);
-
-      //logQCVars_('Member info', info);
-      if (info) {
-
-        var fullName = info.firstName + " " + info.lastName;
-
-        if(fullName.trim = "") {
-          fullName = "Volunteer";      
-        }
-
-        volunteerData = {
-          name: fullName,
-          token: volunteerToken,
-          isMember: true,
-          events: info.events
-          // Add more attributes as needed
-        };
-
-        console.log(`Member authenticated: ${volunteerData.name} (Token: ${volunteerData.token.substring(0, 5)}...)`);
-        return cleanForReturn(volunteerData);
-
-      } else {
-        console.log("Member token found but failed validation.");
-      }
-    } else if (volunteerToken) {
-      
-      info = bckLib.getGuestInfoByToken(sheetInputs, volunteerToken, nameOnly);
-
-      var fullName = info.firstName + " " + info.lastName;
-
-      if(fullName.trim = "") {
-        fullName = "Volunteer";      
-      }
-
-      //logQCVars_('Guest info', info);
-      if (info) {
-
-        var fullName = info.firstName + " " + info.lastName;
-
-        if(fullName.trim = "") {
-          fullName = "Volunteer";      
-        }
-
-        volunteerData = {
-          name: fullName,
-          token: volunteerToken,
-          isMember: false,
-          events: info.events
-          // Add more attributes as needed
-        };
-
-        console.log(`Guest authenticated: ${volunteerData.name} (Token: ${volunteerData.token.substring(0, 5)}...)`);
-        return cleanForReturn(volunteerData);
-
-      } else {
-        console.log("Guest token found but failed validation.");
-        return null;
-      }
-    } else {
-      console.log("No member or guest token found in URL parameters.");
-      return null;
-    }
-
-  } catch (error) {
-    console.log("FATAL ERROR in getAvailableShifts: " + error.toString());
-    return null;
-  }
+  const nameOnly = false;
+  return cleanForReturn(bckLib.getShifts(sheetInputs, volunteerToken, isMember, SHIFT_FLAGS.SELECTED, nameOnly)); 
 
 }
 
-/**
- * Server-side stub to get volunteer's signed up shifts for "My Shifts" tab.
- */
-function getMyShifts(sheetInputs, volunteerToken, isMember=false ) {
-
-  try {
-
-    console.log("--- START getMyShifts ---");
-
-    // Note: To minimize changes to backend, keeping this function same as it was before
-    const volunteerData = getAvailableShifts(sheetInputs, volunteerToken, isMember)
-    if (volunteerData != null){
-      volunteerData.events = volunteerData.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
-      return cleanForReturn(volunteerData);
-    }
-    console.log("FATAL ERROR in getMyShifts: No data returned" );
-    return null;
-
-  } catch (error) {
-    console.log("FATAL ERROR in getMyShifts: " + error.toString());
-  }
-}
 
 /**
  * Server-side stub to get mortuary information for the "Mortuary Information" tab.
@@ -279,26 +180,32 @@ function getVolunteerHistory(sheetInputs, volunteerToken) {
  * Server-side stub to trigger addition of volunteer shifts to sheet.
  */
 
-function triggerVolunteerShiftAddition(sheetInputs, selectedShiftIds, volunteerName, volunteerToken) {
+function triggerVolunteerShiftAddition(sheetInputs, selectedShiftIds, volunteerData) {
 
   let response = null;
+
+  //logQCVars_("triggerVolunteerShiftAddition.volunteerData", volunteerData)
 
   try {
 
     console.log("--- START triggerVolunteerShiftAddition ---");
+    console.log ("selectedShiftIds:" + selectedShiftIds);
+    console.log ("volunteerData:" + JSON.stringify(volunteerData));
 
-    if (selectedShiftIds && volunteerToken) {
-      response = bckLib.setVolunteerShifts(sheetInputs, selectedShiftIds, volunteerName, volunteerToken);
+    if (selectedShiftIds && volunteerData) {
+      const nameOnly = false;
+      response = bckLib.setVolunteerShifts(sheetInputs, selectedShiftIds, volunteerData.name, volunteerData.token);
       if (response) {
-          console.log("Volunteer shifts added: Name:" + volunteerName);
+          console.log("Volunteer shifts added: Name:" + volunteerData.name);
+          bckLib.sendShiftEmail(sheetInputs, volunteerData, selectedShiftIds, "Addition")
           return true;
         } else {
-          console.log("Volunteer shifts failed to update: Name:" + volunteerName);
-          return true;
+          console.log("Volunteer shifts failed to update: Name:" + volunteerData.name);
+          return false;
         }
     }
     else {
-        console.log("Volunteer shifts failed to update: Name:" + volunteerName);
+        console.log("Volunteer shifts failed to update: Name:" + volunteerData.name);
         return false;
     }
 
@@ -314,26 +221,30 @@ function triggerVolunteerShiftAddition(sheetInputs, selectedShiftIds, volunteerN
  * Server-side stub to trigger addition of volunteer shifts to sheet.
  */
 
-function triggerVolunteerShiftRemoval(sheetInputs, shiftIds, volunteerToken) {
+function triggerVolunteerShiftRemoval(sheetInputs, selectedShiftIds, volunteerData) {
 
   let response = null;
 
   try {
 
     console.log("--- START triggerVolunteerShiftRemoval ---");
+    console.log ("selectedShiftIds:" + selectedShiftIds);
+    console.log ("volunteerData:" + JSON.stringify(volunteerData));
 
-    if (selectedShiftIds && volunteerToken) {
-      response = bckLib.removeVolunteerShifts(sheetInputs, shiftIds, volunteerToken);
+    if (selectedShiftIds && volunteerData.token) {
+      response = bckLib.removeVolunteerShifts(sheetInputs, selectedShiftIds, volunteerData.name, volunteerData.token);
+
       if (response) {
-          console.log("Volunteer shifts removed: Token:" + volunteerToken);
+          console.log("Volunteer shifts removed: Name:" + volunteerData.name);
+          bckLib.sendShiftEmail(sheetInputs, volunteerData, selectedShiftIds, "Removal");
           return true;
         } else {
-          console.log("Volunteer shifts failed to remove: Token:" + volunteerToken);
+          console.log("Volunteer shifts failed to remove: Name:" + volunteerData.name);
           return true;
         }
     }
     else {
-        console.log("Volunteer shifts failed to remove: Token:" + volunteerToken);
+        console.log("Volunteer shifts failed to remove: Name:" + volunteerData.name);
         return false;
     }
 
@@ -343,4 +254,39 @@ function triggerVolunteerShiftRemoval(sheetInputs, shiftIds, volunteerToken) {
   }
   
 }
+
+
+/**
+ * TBD there is no trigger for this function
+ * Sends a confirmation email to the volunteer.
+ * @param {string} recipientEmail - The volunteer's email address.
+ * @param {object} shift - Object containing shift details (eventName, eventLocation, eventDate, shiftTime).
+ * @param {string} actionType - 'Signup' or 'Drop'.
+ * @param {string} volunteerName - The name of the volunteer.
+ * @param {string} volunteerUrl - The volunteer's unique portal URL.
+ */
+/**
+ * Sends a confirmation email to the volunteer.
+ * @param {string} recipientEmail - The volunteer's email address.
+ * @param {object} shift - Object containing shift details (eventName, eventLocation, eventDate, shiftTime).
+ * @param {string} actionType - 'Signup' or 'Drop'.
+ * @param {string} volunteerName - The name of the volunteer.
+ * @param {string} volunteerUrl - The volunteer's unique portal URL.
+ */
+function debugSendShiftEmail(){
+  const sheetInputs = setConfigProperties();
+  const volunteerData = {
+        "name" : "Micha Shapiro",
+        "email" : "eshapiro@gmail.com",
+        "token" : "4a477c94-ac0c-400b-a0d6-98fc90014fb2",
+        "isMember" : true,
+        "selectedEvents" : null
+          };
+  const shifts = "c0cb3134-d576-4071-821f-1e8ac2ad90e8";
+  const actionType = "Removal";
+  bckLib.sendShiftEmail(sheetInputs, volunteerData, shifts, actionType);
+
+}
+
+
 

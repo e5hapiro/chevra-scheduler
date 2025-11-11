@@ -74,7 +74,7 @@
 
 <body class="font-text antialiased">
 
-        <!-- Put near the top of your <body>, but inside the main content -->
+      <!-- Put near the top of your <body>, but inside the main content -->
       <div id="loading-overlay" style="
         display: none;
         position: fixed;
@@ -89,7 +89,26 @@
             <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"/>
             <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
           </svg>
-          <span class="ml-4 text-brand-text font-semibold">Signing you up...</span>
+          <span id="loading-text" class="ml-4 text-brand-text font-semibold"></span>
+        </div>
+      </div>
+
+      <div id="confirmation-dialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+          <p id="confirmation-message" class="mb-4 text-gray-900 font-semibold"></p>
+          <div class="flex justify-end gap-4">
+            <button id="confirm-no" class="px-4 py-2 rounded bg-gray-300 hover:bg-gray-400">No</button>
+            <button id="confirm-yes" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">Yes</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="information-dialog" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center hidden z-50">
+        <div class="bg-white rounded-lg p-6 max-w-md w-full shadow-lg">
+          <p id="information-message" class="mb-4 text-gray-900 font-semibold"></p>
+          <div class="flex justify-end">
+            <button id="confirm-ok" class="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700">OK</button>
+          </div>
         </div>
       </div>
 
@@ -163,7 +182,7 @@
                       </h2>
                       <button id="bulk-unselect-btn"
                         class="bg-red-500 text-white py-2 px-6 rounded-lg font-bold transition-colors duration-150 hover:bg-red-600 disabled:opacity-50"
-                        onclick="performBulkUnselect()" disabled>
+                        onclick="performBulkRemoval()" disabled>
                         Remove Selected Shifts
                       </button>
                     </div>
@@ -203,34 +222,43 @@
 
         // Global set to track selected shifts
         var selectedShiftIds = new Set();
-        var selectedUnselectIds = new Set();
+        var selectedRemovalIds = new Set();
         var events = null;
         var selectedEvents = null;
         var volunteerName = "";
         var volunteerToken = "";
+        var volunteerEmail = "";
         var isMember = "";
 
         function init() {
-
-          
+        
           // retrieve data passed by server side DoGo() function
-          const data = JSON.parse(<?= data ?>);
+          const data = JSON.parse('<?= data ?>');
+          console.log (data);
 
+          console.log('INJECTED KNOWN GOOD:', data);
           // store the Volunteer data in a global cache function
           // TBD - eliminate passing this data on each server call.
           cacheVolunteerData = {
             "name" : data.name,
+            "email" : data.email,
             "token" : data.token,
-            "isMember" : data.isMember
+            "isMember" : data.isMember,
+            "selectedEvents" : null
           };
    
+          console.log("Init cacheVolunteerData:", JSON.stringify(cacheVolunteerData));
+
           //          
           console.log("index.html init launched. Volunteer Data received:" + JSON.stringify(cacheVolunteerData));
+
 
           // kept temporarily
           volunteerName = data.name;
           volunteerToken = data.token;
+          volunteerEmail = data.email;
           isMember = data.isMember;
+
 
           const welcomeMessage = document.getElementById('welcome-message');
           if (welcomeMessage && volunteerName) {
@@ -244,13 +272,16 @@
         function showScheduleLoader() {
           var loader = document.getElementById('available-shifts-loader');
           var grid = document.getElementById('available-shifts-grid');
-          if (!loader || !grid) {
-            console.error("Loader or grid not found!", { loader, grid });
+          var bulkSignupBtn = document.getElementById('bulk-signup-btn');
+          if (!loader || !grid || !bulkSignupBtn) {
+            console.error("Loader, grid or button not found!", { loader, grid, bulkSignupBtn });
             return;
           }
           loader.style.display = '';
           grid.style.display = 'none';
+          bulkSignupBtn.style.display = 'none'; // Hide the button
         }
+
         function hideScheduleLoader() {
           var loader = document.getElementById('available-shifts-loader');
           var grid = document.getElementById('available-shifts-grid');
@@ -262,13 +293,16 @@
           grid.style.display = '';
         }
 
-
-        // My Shifts (tab: my-shifts)
         function showMyShiftsLoader() {
           console.log("entering showMyShiftsLoader ");
           document.getElementById('my-shifts-loader').style.display = '';
           document.getElementById('selected-shifts-grid').style.display = 'none';
+          var bulkUnselectBtn = document.getElementById('bulk-unselect-btn');
+          if (bulkUnselectBtn) {
+            bulkUnselectBtn.style.display = 'none'; // Hide
+          }
         }
+
         function hideMyShiftsLoader() {
           console.log("entering hideMyShiftsLoader ");
           document.getElementById('my-shifts-loader').style.display = 'none';
@@ -296,10 +330,13 @@
         }
 
 
-        /**
+
+        /*
          * A map of function names (strings) to the actual function objects.
          * This is the secure way to perform dynamic function calls (Dynamic Dispatch).
          */
+
+
         const HANDLER_FUNCTIONS = {
           // Key (the string name) : Value (the actual function to call)
           "getAvailableShifts": successGetAvailableShifts,
@@ -312,12 +349,12 @@
 
         // Map server function parameters to functions
         const serverFunctionParams = {
-          getAvailableShifts: () => [volunteerToken, isMember, false],
-          getMyShifts: () => [volunteerToken, isMember, false],
+          getAvailableShifts: () => [volunteerToken, isMember],
+          getMyShifts: () => [volunteerToken, isMember],
           getLocations: () => [],
           getVolunteerHistory: () => [volunteerToken],
-          setVolunteerShifts: ids => [ids, volunteerToken],
-          removeVolunteerShifts: ids => [ids, volunteerToken]
+          setVolunteerShifts: ids => [ids, cacheVolunteerData],
+          removeVolunteerShifts: ids => [ids, cacheVolunteerData]
         };
 
         function switchTab(tabName) {
@@ -348,6 +385,7 @@
           if(tabName === 'locations') showLocationsLoader();
           if(tabName === 'signups') showSignupsLoader();
 
+
           // Define mapping from tab names to your server-side function names
           const serverFunctionMap = {
             'schedule': 'getAvailableShifts',
@@ -355,6 +393,7 @@
             'locations': 'getLocations',
             'signups': 'getVolunteerHistory'
           };
+
 
           // Define a map from tab to client-side data handler functions 
           const clientRendererMap = {
@@ -380,7 +419,12 @@
           }
           // ensure that the right parameters are passed
           const params = paramFn(); // returns an array of parameters
+
+          console.log('sending parameters to server:')
+          console.log(JSON.stringify(params));
+
           callServerFunction(serverFunctionName, ...params);
+
 
           // In your server success handler for each tab:
           HANDLER_FUNCTIONS[serverFunctionName] = function(data) {
@@ -390,6 +434,8 @@
             if (serverFunctionName === 'getVolunteerHistory') cacheVolunteerHistory = data;
             clientRenderFunction(data);
             };
+
+
         }
         
         window.switchTab = switchTab; // <-- THIS ENSURES GLOBAL SCOPE
@@ -409,6 +455,7 @@
             switchTab(tabName);
           }
         }
+
 
         function callServerFunction(functionName, parameter1, parameter2, parameter3) {
           google.script.run
@@ -441,7 +488,7 @@
         }
 
         function successGetAvailableShifts(response) {
-            //showMessage("Thank you. Found Available Shifts", "success");
+            showMessage("Thank you. Found Available Shifts");
             console.log(`Thank you. Found Available Shifts`);
             data = response;
 
@@ -454,12 +501,13 @@
             isMember = data.isMember;
             events = data.events;
             selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
+            cacheVolunteerData.selectedEvents = selectedEvents;
             
            
         }
 
         function successGetMyShifts(response) {
-            //showMessage("Thank you. Found Selected Shifts", "success");
+            showMessage("Thank you. Found Selected Shifts",);
             console.log(`Thank you. Found Selected Shifts`);
             data = response;
 
@@ -472,33 +520,38 @@
             isMember = data.isMember;
             events = data.events;
             selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0)
+            cacheVolunteerData.selectedEvents = selectedEvents;
 
             console.log(JSON.stringify(selectedEvents));
                      
         }
 
         function successGetLocations(response) {
-            //showMessage("Thank you. Found Locations", "success");
+            showMessage("Thank you. Found Locations");
             console.log(`Thank you. Found Locations`);
           
         }
 
         function successGetVolunteerHistory(response) {
-            //showMessage("Thank you. Found History", "success");
+            showMessage("Thank you. Found History");
             console.log(`Thank you. Found History`);
           
         }
 
         function successSetVolunteerShifts(response){
-            //showMessage("Thank you. Volunteer Shifts added", "success");
+            showMessage("Thank you. Volunteer Shifts added");
             console.log(`Thank you. Volunteer Shifts added`);
+            selectedShiftIds = new Set(); // Remove previous selections so that we can start from scratch
+            updateBulkSignupButtonState   // If selectedShiftIds are empty should make button unavailable until new selection        
             hideLoading()
             switchTab(tableName);
         }
 
         function successRemoveVolunteerShifts(response){
-            // showMessage("Thank you. Volunteer Shifts removed", "success");
+            showMessage("Thank you. Volunteer Shifts removed");
             console.log(`Thank you. Volunteer Shifts removed`);
+            selectedRemovalIds = new Set(); // Remove previous selections so that we can start from scratch
+            updateBulkRemovalButtonState(); // If selectedShiftIds are empty should make button unavailable until new selection
             hideLoading()
             switchTab(tableName);
         }
@@ -509,6 +562,12 @@
           hideScheduleLoader();
 
           console.log("== calling renderAvailableShifts ==");
+
+          // Need to ensure the sign up button is displayed
+          var bulkSignupBtn = document.getElementById('bulk-signup-btn');
+          if (bulkSignupBtn) {
+            bulkSignupBtn.style.display = ''; // Show the button
+          }
 
           if (!data) {
             console.error("no data passed to renderAvailableShifts ", document.querySelector('.tab-content.active'));
@@ -569,7 +628,6 @@
                                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                                 <div>
                                                     <p class="font-semibold">${shift["Shift Time"]}</p>
-                                                    <p class="text-sm">${shift["Location"] || "Location unknown"}</p>
                                                 </div>
                                                 <span>${selectedShiftIds.has(shift["Shift ID"]) ? "✓ Selected" : "Select"}</span>
                                             </div>
@@ -587,9 +645,18 @@
 
 
         function renderSelectedShifts(data) {
-          hideMyShiftsLoader();
           console.log("== calling renderSelectedShifts ==");
+
+          // Ensure the button for unselecting events is displayed
+          hideMyShiftsLoader();
+          var bulkUnselectBtn = document.getElementById('bulk-unselect-btn');
+          if (bulkUnselectBtn) {
+            bulkUnselectBtn.style.display = ''; // Show
+          }
+
           selectedEvents = data.events
+          cacheVolunteerData.selectedEvents = selectedEvents;
+
 
 
             const shiftsContainer = document.getElementById('selected-shifts-grid');
@@ -623,14 +690,13 @@
                                             class="shift-select-btn bg-red-100 text-red-700"
                                             style="width:100%; padding:1em; margin-bottom:0.5em; border:1px solid #FBB; border-radius:8px;"
                                             data-shift-id="${shift["Shift ID"]}"
-                                            onclick="toggleShiftUnselect('${shift["Shift ID"]}')"
+                                            onclick="toggleShiftRemoval('${shift["Shift ID"]}')"
                                         >
                                             <div style="display:flex; justify-content:space-between; align-items:center;">
                                                 <div>
                                                     <p class="font-semibold">${shift["Shift Time"]}</p>
-                                                    <p class="text-sm">${shift["Location"] || "Location unknown"}</p>
                                                 </div>
-                                                <span>✓ Signed Up (Click to Unselect)</span>
+                                                <span>${selectedRemovalIds.has(shift["Shift ID"]) ? "Selected for Removal" : "✓ Signed Up (Click to Unselect)" }</span>
                                             </div>
                                         </button>`
                                     ).join('')}
@@ -640,7 +706,7 @@
                     `;
                     shiftsContainer.innerHTML += eventHTML;
                 });
-            updateBulkUnselectButtonState();
+            updateBulkRemovalButtonState();
         }
 
 
@@ -781,37 +847,72 @@
           `;
         }
 
-        function toggleShiftUnselect(shiftId) {
-            if (selectedUnselectIds.has(shiftId)) {
-                selectedUnselectIds.delete(shiftId);
-            } else {
-                selectedUnselectIds.add(shiftId);
-            }
-            refreshTab();
-            updateBulkUnselectButtonState();
+        function updateBulkRemovalButtonState() {
+            const btn = document.getElementById('bulk-unselect-btn');
+            btn.disabled = selectedRemovalIds.size === 0;
         }
 
-        function updateBulkUnselectButtonState() {
-            document.getElementById('bulk-unselect-btn').disabled = selectedUnselectIds.size === 0;
-        }
 
         function toggleShiftSelection(shiftId) {
+            if (!cacheAvailableShifts || !cacheAvailableShifts.events) return;
+
             if (selectedShiftIds.has(shiftId)) {
                 selectedShiftIds.delete(shiftId);
             } else {
                 selectedShiftIds.add(shiftId);
             }
-            refreshTab();
+
+            // Update cacheAvailableShifts.events to reflect selectedShiftIds status
+            cacheAvailableShifts.events.forEach(event => {
+              event.availableShifts.forEach(shift => {
+                if (shift["Shift ID"] === shiftId) {
+                  // No actual field for selected state on shifts in your model, but if needed,
+                  // you could set a custom property, e.g. shift.isSelected = selectedShiftIds.has(shiftId);
+                  // For now, UI colors depend on selectedShiftIds set, so no need to update shift object.
+                }
+              });
+            });
+
+            // Directly re-render with updated cache
+            renderAvailableShifts(cacheAvailableShifts);
             updateBulkSignupButtonState();
         }
+
+        function toggleShiftRemoval(shiftId) {
+            if (!cacheMyShifts || !cacheMyShifts.events) return;
+
+            if (selectedRemovalIds.has(shiftId)) {
+                selectedRemovalIds.delete(shiftId);
+            } else {
+                selectedRemovalIds.add(shiftId);
+            }
+
+            // Optionally update cacheMyShifts.events if your render depends on shift selection internal state (not strictly needed if using selectedRemovalIds set)
+            // But if you want to sync underlying data, you would find the shift and mark it.
+
+            // Directly re-render with updated cache
+            renderSelectedShifts(cacheMyShifts);
+            updateBulkRemovalButtonState();
+        }
+
 
         function updateBulkSignupButtonState() {
             const btn = document.getElementById('bulk-signup-btn');
             btn.disabled = selectedShiftIds.size === 0;
         }
 
-        function performBulkSignup() {
-            showLoading();
+        async function performBulkSignup() {
+
+            const confirmed = await showConfirmationDialog("Please confirm you wish to add these shifts?");
+            if (confirmed) {
+              // Proceed with removal
+              console.log("User confirmed removal.");
+              // Your removal logic here...
+            } else {
+              console.log("User cancelled removal.");
+            }
+
+            showLoading("Signing you up for shifts...");
             const ids = Array.from(selectedShiftIds);
             if (ids.length === 0) {
               hideLoading();
@@ -821,46 +922,62 @@
 
         }
 
-        function performBulkUnselect() {
-            showLoading();
-            const ids = Array.from(selectedUnselectIds);
+        async function performBulkRemoval() {
+
+            const confirmed = await showConfirmationDialog("Are you sure you wish to remove these shifts?");
+            if (confirmed) {
+              // Proceed with removal
+              console.log("User confirmed removal.");
+              // Your removal logic here...
+            } else {
+              console.log("User cancelled removal.");
+            }
+
+            showLoading("Removing you from shifts...");
+            const ids = Array.from(selectedRemovalIds);
             if (ids.length === 0) {
               hideLoading();
               return;
             }
-            handleBulkShiftUnselect(ids);
+            handleBulkShiftRemoval(ids);
         }
 
-        function showLoading() {
+        function showLoading(text) {
+
+          function setLoadingText(text) {
+            document.getElementById('loading-text').textContent = text;
+          }
+
+          setLoadingText(text);
           document.getElementById('loading-overlay').style.display = 'flex';
         }
+
         function hideLoading() {
           document.getElementById('loading-overlay').style.display = 'none';
         }
 
 
 
-
-        function handleBulkSignupResponse() {
-          //'tbd'
-        }
-
         function handleBulkShiftSignup(selectedShiftIds) {
             console.log ("got here - handleBulkShiftSignup")
-            console.log (selectedShiftIds) ;
-            callServerFunction("setVolunteerShifts", selectedShiftIds, volunteerName, volunteerToken);
+            // console.log (selectedShiftIds) ;
+            cacheVolunteerData.selectedEvents = selectedEvents;  // Ensures that the selected events are included
+            console.log("Passing cacheVolunteerData for setVolunteerShifts:", JSON.stringify(cacheVolunteerData));
+            callServerFunction("setVolunteerShifts", selectedShiftIds, cacheVolunteerData);
         }
 
-        function handleBulkShiftUnselect (shiftIds) {
-            console.log ("got here - handleBulkShiftUnselect")
-            console.log (shiftIds) ;
-            callServerFunction("removeVolunteerShifts", shiftIds, volunteerName, volunteerToken);
+        function handleBulkShiftRemoval (shiftIds) {
+            console.log ("got here - handleBulkShiftRemoval")
+            //console.log ("shiftIds" + shiftIds) ;
+            cacheVolunteerData.selectedEvents = selectedEvents;  // Ensures that the selected events are included
+            console.log("Passing cacheVolunteerData for removeVolunteerShifts:", JSON.stringify(cacheVolunteerData));
+            callServerFunction("removeVolunteerShifts", shiftIds, cacheVolunteerData);
         }
 
         // Server error handler
         function handleServerError(error) {
 //          dom.loading.classList.add("hidden");
-          //showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
+          showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
           console.error("Client-side error from server call:", error.message);
         }
 
@@ -918,18 +1035,59 @@
             }, 3000);
         }
 
-        // Show a temporary message in the message box
-        function showMessage(message, type) {
-          const box = dom.messageBox;
-          box.textContent = message;
-          box.className = "p-4 mb-6 rounded-lg font-bold shadow-md";
-          if (type === "success") box.classList.add("bg-green-100", "border", "border-green-400", "text-green-700");
-          else if (type === "error") box.classList.add("bg-red-100", "border", "border-red-400", "text-red-700");
-          else if (type === "warning") box.classList.add("bg-yellow-100", "border", "border-yellow-400", "text-yellow-700");
-          box.classList.remove("hidden");
-          setTimeout(() => box.classList.add("hidden"), 7000);
+        function showMessage(message) {
+          return new Promise(resolve => {
+            const dialog = document.getElementById('information-dialog');
+            const messageElem = document.getElementById('information-message');
+            const okBtn = document.getElementById('confirm-ok');
+
+            messageElem.textContent = message;
+            dialog.classList.remove('hidden');
+
+            function cleanUp() {
+              okBtn.removeEventListener('click', onOk);
+              dialog.classList.add('hidden');
+            }
+
+            function onOk() {
+              cleanUp();
+              resolve();
+            }
+
+            okBtn.addEventListener('click', onOk);
+          });
         }
 
+        function showConfirmationDialog(message) {
+          return new Promise((resolve) => {
+            const dialog = document.getElementById('confirmation-dialog');
+            const messageElem = document.getElementById('confirmation-message');
+            const yesBtn = document.getElementById('confirm-yes');
+            const noBtn = document.getElementById('confirm-no');
+
+            messageElem.textContent = message;
+            dialog.classList.remove('hidden');
+
+            function cleanUp() {
+              yesBtn.removeEventListener('click', onYes);
+              noBtn.removeEventListener('click', onNo);
+              dialog.classList.add('hidden');
+            }
+
+            function onYes() {
+              cleanUp();
+              resolve(true);
+            }
+
+            function onNo() {
+              cleanUp();
+              resolve(false);
+            }
+
+            yesBtn.addEventListener('click', onYes);
+            noBtn.addEventListener('click', onNo);
+          });
+        }
 
         // Initialize to the Schedule Shifts tab on load
         window.onload = init;

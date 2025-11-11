@@ -1,15 +1,16 @@
 
 /**
 * -----------------------------------------------------------------
-* _webPortalInit.js
+* _client_web_portal_handlers.js
 * Chevra Kadisha Shifts Scheduler
-* Web Portal Initialization
+* Web Portal and Google Form Initialization
 * -----------------------------------------------------------------
 * _webPortalInit.js
- * Version: 1.0.1
- * Last updated: 2025-10-30
+ * Version: 1.0.6
+ * Last updated: 2025-11-10
  * 
- * CHANGELOG v1.0.1:
+ * CHANGELOG 
+ *   v1.0.1:
  *   - Initial implementation of doGet.
  *   - Added logging and error handling.
  *   - Added volunteer information retrieval.
@@ -27,6 +28,8 @@
  *   - Added volunteer contact information retrieval.
  *   - Added error handling and logging.
  *   - Added logging and error handling.
+ *   v1.0.6:
+ *   - Consolidated logic and moved standard logic to getShifts in bckLib
  * 
  * Web Portal Initialization and Submit Handler
  * -----------------------------------------------------------------
@@ -36,92 +39,78 @@
  * Handles the URL request and renders the HTML.
  */
 
+
 function doGet(e) {
-  try {
-    Logger.log("--- START doGet invocation ---");
+  Logger.log("--- START doGet invocation ---");
 
-    // Fetch tokens for member (m) and guest (g)
-    const memberToken = e.parameter.m || null;
-    const guestToken = e.parameter.g || null;
-
-    var info = null;
-    var volunteerData = null;
-    const nameOnly = true;     // To reduce load time, only the name is needed on init.
-
-    if (memberToken) {
-
-      info = bckLib.getMemberInfoByToken(setConfigProperties(), memberToken, nameOnly);
-
-      var fullName = info.firstName + " " + info.lastName;
-
-      if(fullName.trim === "") {
-        fullName = "Volunteer";      
-      }
-
-
-      logQCVars_('memberToken info', info);
-      if (info) {
-
-        volunteerData = {
-          name: fullName,
-          token: memberToken,
-          isMember: true,
-          events: info.events
-          // Add more attributes as needed
-        };
-
-        Logger.log(`Member authenticated: ${volunteerData.name} (Token: ${volunteerData.token.substring(0, 5)}...)`);
-      } else {
-        Logger.log("Member token found but failed validation.");
-      }
-    } else if (guestToken) {
-      
-      info = bcklib.getGuestInfoByToken(setConfigProperties(), guestToken, nameOnly);
-
-      var fullName = info.firstName + " " + info.lastName;
-
-      if(fullName.trim === "") {
-        fullName = "Volunteer";      
-      }
-
-      logQCVars_('guestToken info', info);
-      if (info) {
-
-        volunteerData = {
-          name: fullName,
-          token: memberToken,
-          isMember: false,
-          events: info.events
-          // Add more attributes as needed
-        };
-
-        Logger.log(`Guest authenticated: ${volunteerData.name} (Token: ${volunteerData.token.substring(0, 5)}...)`);
-
-      } else {
-        Logger.log("Guest token found but failed validation.");
-      }
-    } else {
-      Logger.log("No member or guest token found in URL parameters.");
-    }
-
-    const template = HtmlService.createTemplateFromFile('index');
-
-    logQCVars_('volunteer data', volunteerData);
-
-
-    template.data = JSON.stringify(volunteerData);  // Pass as JSON string
-    //logQCVars_("template",template);
-
-    return template.evaluate()
-      .setTitle('Volunteer Portal')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-
-
-  } catch (error) {
-    Logger.log("FATAL ERROR in doGet: " + error.toString());
+  // Helper function to centralize error output (avoids repetition)
+  function errorHtmlOutput_() {
     return HtmlService.createHtmlOutput('<h1>Fatal App Error</h1><p>The system failed to load the interface. Please contact support. (Check Logs for FATAL ERROR in doGet)</p>');
   }
+
+  const memberToken = e.parameter.m || null;
+  const guestToken = e.parameter.g || null;
+
+  // Determine the volunteerToken 
+  const volunteerToken = memberToken || guestToken;
+  
+  // Exit early if no token is present, reducing nesting
+  if (!volunteerToken) {
+    Logger.log("No member or guest token found in URL parameters.");
+    return errorHtmlOutput_();
+  }
+
+  // Determine token type; only needed if the called function requires it
+  const isMember = !!memberToken; 
+
+  try {
+    const sheetInputs = setConfigProperties();
+    const nameOnly = true;
+
+    // Use isMember directly in the call. volunteerToken is guaranteed to be set here.
+    var volunteerData = bckLib.getShifts(sheetInputs, volunteerToken, isMember, SHIFT_FLAGS.NONE, nameOnly);
+
+    // Proceed with opening form if the volunteer data is available.
+    if (volunteerData) {
+      const template = HtmlService.createTemplateFromFile('index');
+      
+
+      // Template data setting remains the same
+      //template.data = JSON.stringify(volunteerData);
+      //template.data = JSON.stringify(cleanForReturn(volunteerData));
+      //template.data = JSON.stringify({ msg: "Hello from doGet!", value: 42 });
+
+      template.data = JSON.stringify(volunteerData);
+      logQCVars_('doGet[template.data1]', template.data);
+
+/*
+      volunteerData = {
+        name: "Micha Shapiro",
+        token: "4a477c94-ac0c-400b-a0d6-98fc90014fb2",
+        email: "eshapiro@gmail.com",
+        isMember: true
+        // Add more attributes as needed
+      };
+
+      logQCVars_('doGet[VolunteerData2]', volunteerData);
+
+      template.data = JSON.stringify(volunteerData);
+      logQCVars_('doGet[template.data2]', template.data);
+*/
+      return template.evaluate()
+        .setTitle('Volunteer Portal')
+        .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    } 
+    else {
+      Logger.log("Token found but failed validation.");
+      return errorHtmlOutput_();
+    }
+  } catch (error) {
+    Logger.log("FATAL ERROR in doGet: " + error.toString());
+    return errorHtmlOutput_();
+  }
 }
+
 
 
 /**
