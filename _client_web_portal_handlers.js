@@ -127,5 +127,35 @@ function processFormSubmit(e) {
 
 }
 
+/**
+ * Handles the 'On open' trigger to enable the administrators menu choice.
+ * This function creates and opens a menu and provides access specific form handlers.
+ * @param {GoogleAppsScript.Events.SheetsOnFormSubmit} e The form submit event object.
+ */
+
+function onOpen() {
+
+
+  // Add a custom menu to the spreadsheet.
+  var ui = SpreadsheetApp.getUi();
+      ui.createMenu('BCK Admin')
+      .addItem('About BCK', 'menuAbout')
+      .addSeparator()
+      .addSubMenu(ui.createMenu('Trigger')
+        .addItem('Trigger Emails', 'menuTriggerEmails'))
+      .addToUi();
+}
+
+
+// Handler for the Trigger Emails item
+function menuTriggerEmails() {
+  triggeredFunction();
+  SpreadsheetApp.getUi().alert('Trigger Emails function has been executed');
+}
+
+// Handler for the About menu item
+function menuAbout() {
+  bckLib.displayAbout();
+}
 
 
