@@ -111,7 +111,14 @@ function doGet(e) {
   }
 }
 
-
+/**
+ * Includes another HTML file (used for JS/CSS/partials).
+ * @param {string} filename
+ * @returns {string}
+ */
+function include(filename) {
+  return HtmlService.createHtmlOutputFromFile(filename).getContent();
+}
 
 /**
  * Handles the 'On form submit' trigger from the administrator's event form.

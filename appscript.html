@@ -1,0 +1,1013 @@
+<!-- AppScript.html: all client-side JS for the Volunteer Portal -->
+<script>
+  // Global variable to cache server side function return data
+  let tableName = null;
+  let cacheVolunteerData = null;
+  let cacheAvailableShifts = null;
+  let cacheMyShifts = null;
+  let cacheLocations = null;
+  let cacheVolunteerHistory = null;
+
+  // Global sets and state to track selected shifts and volunteer context
+  var selectedShiftIds = new Set();
+  var selectedRemovalIds = new Set();
+  var events = null;
+  var selectedEvents = null;
+
+  /**
+   * Initializes the page with data injected from the server (DoGet/DoPost).
+   * Sets up the volunteer cache, welcome message, and loads the default tab.
+   */
+  function init() {
+
+    // Retrieve data passed by server side DoGo() function
+
+    // SERVER_DATA_JSON is defined in index.html
+    const data = JSON.parse(SERVER_DATA_JSON);
+    console.log(data);
+    //const data = JSON.parse('<?= data ?>');
+
+    console.log('INJECTED KNOWN GOOD:', data);
+
+    // Store the Volunteer data in a global cache object
+    // TODO - eliminate passing this data on each server call.
+    cacheVolunteerData = {
+      "name": data.name,
+      "email": data.email,
+      "token": data.token,
+      "isMember": data.isMember,
+      "selectedEvents": null
+    };
+
+    console.log("Init cacheVolunteerData:", JSON.stringify(cacheVolunteerData));
+    console.log("index.html init launched. Volunteer Data received:" + JSON.stringify(cacheVolunteerData));
+
+    const welcomeMessage = document.getElementById('welcome-message');
+    if (welcomeMessage && cacheVolunteerData.name) {
+      welcomeMessage.textContent = "Welcome, " + cacheVolunteerData.name;
+    }
+
+    hideLoading();         // Hides the loading indicator so it can be called later when loading data.
+    switchTab('schedule'); // Load first tab data
+  }
+
+  /**
+   * Shows loader for the Schedule tab and hides its grid/button.
+   */
+  function showScheduleLoader() {
+    var loader = document.getElementById('available-shifts-loader');
+    var grid = document.getElementById('available-shifts-grid');
+    var bulkSignupBtn = document.getElementById('bulk-signup-btn');
+    if (!loader || !grid || !bulkSignupBtn) {
+      console.error("Loader, grid or button not found!", { loader, grid, bulkSignupBtn });
+      return;
+    }
+    loader.style.display = '';
+    grid.style.display = 'none';
+    bulkSignupBtn.style.display = 'none'; // Hide the button
+  }
+
+  /**
+   * Hides loader for the Schedule tab and shows its grid.
+   */
+  function hideScheduleLoader() {
+    var loader = document.getElementById('available-shifts-loader');
+    var grid = document.getElementById('available-shifts-grid');
+    if (!loader || !grid) {
+      console.error("Loader or grid not found!", { loader, grid });
+      return;
+    }
+    loader.style.display = 'none';
+    grid.style.display = '';
+  }
+
+  /**
+   * Shows loader for the My Shifts tab and hides its grid/button.
+   */
+  function showMyShiftsLoader() {
+    console.log("entering showMyShiftsLoader ");
+    var loader = document.getElementById('my-shifts-loader');
+    var grid = document.getElementById('selected-shifts-grid');
+    var bulkUnselectBtn = document.getElementById('bulk-unselect-btn');
+
+    if (!loader || !grid) {
+      console.error("My Shifts loader or grid not found!", { loader, grid });
+      return;
+    }
+
+    loader.style.display = '';
+    grid.style.display = 'none';
+
+    if (bulkUnselectBtn) {
+      bulkUnselectBtn.style.display = 'none';
+    }
+  }
+
+  /**
+   * Hides loader for the My Shifts tab and shows its grid.
+   */
+  function hideMyShiftsLoader() {
+    console.log("entering hideMyShiftsLoader ");
+    var loader = document.getElementById('my-shifts-loader');
+    var grid = document.getElementById('selected-shifts-grid');
+
+    if (!loader || !grid) {
+      console.error("My Shifts loader or grid not found!", { loader, grid });
+      return;
+    }
+
+    loader.style.display = 'none';
+    grid.style.display = '';
+  }
+
+  /**
+   * Shows loader for the Locations tab and hides its grid.
+   */
+  function showLocationsLoader() {
+    var loader = document.getElementById('locations-loader');
+    var grid = document.getElementById('locations-info-grid');
+
+    if (!loader || !grid) {
+      console.error("Locations loader or grid not found!", { loader, grid });
+      return;
+    }
+
+    loader.style.display = '';
+    grid.style.display = 'none';
+  }
+
+  /**
+   * Hides loader for the Locations tab and shows its grid.
+   */
+  function hideLocationsLoader() {
+    var loader = document.getElementById('locations-loader');
+    var grid = document.getElementById('locations-info-grid');
+
+    if (!loader || !grid) {
+      console.error("Locations loader or grid not found!", { loader, grid });
+      return;
+    }
+
+    loader.style.display = 'none';
+    grid.style.display = '';
+  }
+
+  /**
+   * Shows loader for the Volunteer History tab and hides its grid.
+   */
+  function showSignupsLoader() {
+    var loader = document.getElementById('signups-loader');
+    var grid = document.getElementById('volunteer-history-grid');
+
+    if (!loader || !grid) {
+      console.error("Signups loader or grid not found!", { loader, grid });
+      return;
+    }
+
+    loader.style.display = '';
+    grid.style.display = 'none';
+  }
+
+  /**
+   * Hides loader for the Volunteer History tab and shows its grid.
+   */
+  function hideSignupsLoader() {
+    var loader = document.getElementById('signups-loader');
+    var grid = document.getElementById('volunteer-history-grid');
+
+    if (!loader || !grid) {
+      console.error("Signups loader or grid not found!", { loader, grid });
+      return;
+    }
+
+    loader.style.display = 'none';
+    grid.style.display = '';
+  }
+
+  /*
+  * A map of function names (strings) to the actual function objects.
+  * This is the secure way to perform dynamic function calls (Dynamic Dispatch).
+  */
+  const HANDLER_FUNCTIONS = {
+    // Key (the string name) : Value (the actual function to call)
+    "getAvailableShifts": successGetAvailableShifts,
+    "getMyShifts": successGetMyShifts,
+    "getLocations": successGetLocations,
+    "getVolunteerHistory": successGetVolunteerHistory,
+    "setVolunteerShifts": successSetVolunteerShifts,
+    "removeVolunteerShifts": successRemoveVolunteerShifts
+  };
+
+  /**
+   * Map from server function name to a function that produces its parameter array.
+   */
+  const serverFunctionParams = {
+    getAvailableShifts: () => [cacheVolunteerData.token, cacheVolunteerData.isMember],
+    getMyShifts: () => [cacheVolunteerData.token, cacheVolunteerData.isMember],
+    getLocations: () => [],
+    getVolunteerHistory: () => [cacheVolunteerData.token],
+    setVolunteerShifts: ids => [ids, cacheVolunteerData],
+    removeVolunteerShifts: ids => [ids, cacheVolunteerData]
+  };
+
+  /**
+   * Switches the active tab, shows the appropriate loader, and calls the matching server function.
+   * @param {string} tabName - One of 'schedule', 'my-shifts', 'locations', 'signups'.
+   */
+  function switchTab(tabName) {
+    tableName = tabName; // Track current tab globally
+    console.log("== switchTab called ==");
+
+    // Hide all tab contents and deactivate tab buttons
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.tab-button').forEach(b => {
+      b.classList.remove('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+      b.classList.add('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
+    });
+
+    // Activate selected tab button
+    const activeTab = document.getElementById('tab-' + tabName);
+    if (activeTab) {
+      activeTab.classList.remove('bg-brand-info-bg', 'text-brand-text/80', 'shadow-sm');
+      activeTab.classList.add('active', 'bg-brand-background', 'text-brand-accent', 'shadow-md');
+    }
+
+    // Show loading for active tab
+    const tabContent = document.getElementById('content-' + tabName);
+    if (!tabContent) return;
+    tabContent.classList.add('active');
+
+    if (tabName === 'schedule') showScheduleLoader();
+    if (tabName === 'my-shifts') showMyShiftsLoader();
+    if (tabName === 'locations') showLocationsLoader();
+    if (tabName === 'signups') showSignupsLoader();
+
+    // Map tab name to server function
+    const serverFunctionMap = {
+      'schedule': 'getAvailableShifts',
+      'my-shifts': 'getMyShifts',
+      'locations': 'getLocations',
+      'signups': 'getVolunteerHistory'
+    };
+
+    const serverFunctionName = serverFunctionMap[tabName];
+
+    if (!serverFunctionName) {
+      console.error(`No server function defined for tab: ${tabName}`);
+      tabContent.innerHTML = '<p class="p-6 text-center text-red-500">Error loading tab content.</p>';
+      return;
+    }
+
+    const paramFn = serverFunctionParams[serverFunctionName];
+    if (!paramFn) {
+      throw new Error("Parameters map not found for: " + serverFunctionName);
+    }
+    const params = paramFn();
+
+    console.log('sending parameters to server:');
+    console.log(JSON.stringify(params));
+
+    callServerFunction(serverFunctionName, ...params);
+  }
+
+  // Ensure switchTab is available globally for inline onclick handlers
+  window.switchTab = switchTab;
+
+  /**
+   * Refreshes the current tab using cached data if available, otherwise refetches from server.
+   */
+  function refreshTab() {
+    const tabName = tableName;
+    if (tabName === 'schedule' && cacheAvailableShifts) {
+      renderAvailableShifts(cacheAvailableShifts);
+    } else if (tabName === 'my-shifts' && cacheMyShifts) {
+      renderSelectedShifts(cacheMyShifts);
+    } else if (tabName === 'locations' && cacheLocations) {
+      renderLocations(cacheLocations);
+    } else if (tabName === 'signups' && cacheVolunteerHistory) {
+      renderVolunteerHistory(cacheVolunteerHistory);
+    } else {
+      // No cache or forced refresh, so call the server
+      switchTab(tabName);
+    }
+  }
+
+  /**
+   * Generic wrapper for google.script.run to call server-side functions.
+   * @param {string} functionName - Name of the server function handler.
+   * @param {*} parameter1
+   * @param {*} parameter2
+   * @param {*} parameter3
+   */
+  function callServerFunction(functionName, parameter1, parameter2, parameter3) {
+    google.script.run
+      .withSuccessHandler(function (response) {
+        console.log("success handler" + functionName);
+        serverFunctionSuccessHandler(functionName, response);
+      })
+      .withFailureHandler(function (error) {
+        console.error(`Error calling ${functionName}:`, error);
+        // TODO: handle error on client side as needed
+      })
+      .serverSideFunctionHandler(functionName, parameter1, parameter2, parameter3);
+  }
+
+  /**
+   * Routes a server response to the appropriate client-side success handler.
+   * @param {string} functionName
+   * @param {*} response
+   * @returns {*}
+   */
+  function serverFunctionSuccessHandler(functionName, response) {
+    console.log(`Success calling ${functionName}:`, response);
+    const targetFunction = HANDLER_FUNCTIONS[functionName];
+
+    if (typeof targetFunction === 'function') {
+      return targetFunction(response);
+    } else {
+      console.error(`Unknown function name requested: ${functionName}`);
+      return { success: false, message: `Function '${functionName}' not found.` };
+    }
+  }
+
+  /**
+   * Success handler for getAvailableShifts.
+   * Updates volunteer state, cache, and renders the Available Shifts tab.
+   * @param {{name:string, token:string, isMember:boolean, events:Array}} response
+   */
+  function successGetAvailableShifts(response) {
+    //showMessage("Thank you. Found Available Shifts");
+    //console.log(`Thank you. Found Available Shifts`);
+    var data = response;
+
+    //console.log('Data object:', data);
+
+    cacheVolunteerData.name = data.name;
+    cacheVolunteerData.email = data.email || cacheVolunteerData.email;
+    cacheVolunteerData.token = data.token;
+    cacheVolunteerData.isMember = data.isMember;
+    events = data.events;
+    selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0);
+    cacheVolunteerData.selectedEvents = selectedEvents;
+
+    cacheAvailableShifts = data;
+    renderAvailableShifts(cacheAvailableShifts);
+  }
+
+  /**
+   * Success handler for getMyShifts.
+   * Updates volunteer state, cache, and renders the My Shifts tab.
+   * @param {{name:string, token:string, isMember:boolean, events:Array}} response
+   */
+  function successGetMyShifts(response) {
+    //showMessage("Thank you. Found Selected Shifts");
+    //console.log(`Thank you. Found Selected Shifts`);
+    var data = response;
+
+    //console.log('Data object:', data);
+
+    cacheVolunteerData.name = data.name;
+    cacheVolunteerData.email = data.email || cacheVolunteerData.email;
+    cacheVolunteerData.token = data.token;
+    cacheVolunteerData.isMember = data.isMember;
+    events = data.events;
+    selectedEvents = data.events.filter(event => Array.isArray(event.selectedShifts) && event.selectedShifts.length > 0);
+    cacheVolunteerData.selectedEvents = selectedEvents;
+
+
+    //console.log(JSON.stringify(selectedEvents));
+
+    cacheMyShifts = data;
+    renderSelectedShifts(data);
+  }
+
+  /**
+   * Success handler for getLocations.
+   * Updates locations cache and renders the Locations tab.
+   * @param {*} response
+   */
+  function successGetLocations(response) {
+//    showMessage("Thank you. Found Locations");
+//    console.log(`Thank you. Found Locations`);
+
+    cacheLocations = response;
+    renderLocations(response);
+  }
+
+  /**
+   * Success handler for getVolunteerHistory.
+   * Updates history cache and renders the Volunteer History tab.
+   * @param {*} response
+   */
+  function successGetVolunteerHistory(response) {
+//    showMessage("Thank you. Found History");
+//    console.log(`Thank you. Found History`);
+
+    cacheVolunteerHistory = response;
+    renderVolunteerHistory(response);
+  }
+
+  /**
+   * Success handler for setVolunteerShifts.
+   * Clears selected shifts, updates button state, hides loading, and refreshes the current tab.
+   * @param {*} response
+   */
+  function successSetVolunteerShifts(response) {
+    showMessage("Thank you. Volunteer Shifts added");
+    console.log(`Thank you. Volunteer Shifts added`);
+    selectedShiftIds = new Set();           // Remove previous selections so that we can start from scratch
+    updateBulkSignupButtonState();          // Ensure bulk signup button reflects the cleared selection
+    hideLoading();
+    switchTab(tableName);
+  }
+
+  /**
+   * Success handler for removeVolunteerShifts.
+   * Clears removal selections, updates button state, hides loading, and refreshes the current tab.
+   * @param {*} response
+   */
+  function successRemoveVolunteerShifts(response) {
+    showMessage("Thank you. Volunteer Shifts removed");
+    console.log(`Thank you. Volunteer Shifts removed`);
+    selectedRemovalIds = new Set();         // Remove previous selections so that we can start from scratch
+    updateBulkRemovalButtonState();
+    hideLoading();
+    switchTab(tableName);
+  }
+
+  /**
+   * Renders the Available Shifts tab from data.
+   * @param {{events:Array}} data
+   */
+  function renderAvailableShifts(data) {
+    hideScheduleLoader();
+
+    console.log("== calling renderAvailableShifts ==");
+    console.log(JSON.stringify(data.events));
+
+    // Ensure the sign up button is displayed
+    var bulkSignupBtn = document.getElementById('bulk-signup-btn');
+    if (bulkSignupBtn) {
+      bulkSignupBtn.style.display = ''; // Show the button
+    }
+
+    if (!data) {
+      console.error("no data passed to renderAvailableShifts ", document.querySelector('.tab-content.active'));
+      return;
+    }
+
+    const events = data.events;
+
+    if (!events) {
+      console.error("no events passed to renderAvailableShifts ", document.querySelector('.tab-content.active'));
+      return;
+    }
+
+    const shiftsContainer = document.getElementById('available-shifts-grid');
+
+    if (!shiftsContainer) {
+      console.error("available-shifts-grid container not found. Tab active?", document.querySelector('.tab-content.active'));
+      return;
+    }
+
+    shiftsContainer.innerHTML = '';
+
+    events.forEach((event, idx) => {
+      let eventHTML = `
+        <div class="border rounded-xl p-6 mb-6" style="background-color: #f9f4ed;">
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
+            <p class="text-brand-text">Location: ${event["Location"]}</p>
+            <p class="text-brand-text">Start: ${new Date(event["Start Date"]).toLocaleString()} to End: ${new Date(event["End Date"]).toLocaleString()}</p>
+          </div>
+          <div class="p-4 rounded-lg bg-brand-info-bg">
+            <h4 class="font-semibold mb-2 text-brand-text">About ${event["Deceased Name"]}</h4>
+            <p class="text-brand-text text-sm leading-relaxed">${event["Personal Information"] || ""}</p>
+          </div>
+          <div class="mt-6">
+            <h4 class="font-bold mb-2 text-brand-text">Available Shifts</h4>
+            <div class="space-y-2">
+              ${
+                event.availableShifts.length === 0
+                  ? '<p class="text-gray-500">No available shifts.</p>'
+                  : event.availableShifts.map(shift =>
+                      `<button
+                        class="shift-select-btn ${selectedShiftIds.has(shift["Shift ID"]) ? "bg-brand-signup text-white" : "bg-white text-brand-signup"}"
+                        style="width:100%; padding:1em; margin-bottom:0.5em; border:1px solid #EEE; border-radius:8px; transition:background 0.2s;"
+                        data-shift-id="${shift["Shift ID"]}"
+                        onclick="toggleShiftSelection('${shift["Shift ID"]}')"
+                      >
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                          <div>
+                            <p class="font-semibold">${shift["Shift Time"]}</p>
+                          </div>
+                          <span>${selectedShiftIds.has(shift["Shift ID"]) ? "✓ Selected" : "Select"}</span>
+                        </div>
+                      </button>`
+                    ).join('')
+              }
+            </div>
+          </div>
+        </div>
+      `;
+      shiftsContainer.innerHTML += eventHTML;
+    });
+    updateBulkSignupButtonState();
+  }
+
+  /**
+   * Renders the My Shifts tab from data.
+   * @param {{events:Array}} data
+   */
+  function renderSelectedShifts(data) {
+    console.log("== calling renderSelectedShifts ==");
+
+    hideMyShiftsLoader();
+
+    // Ensure the button for unselecting events is displayed
+    var bulkUnselectBtn = document.getElementById('bulk-unselect-btn');
+    if (bulkUnselectBtn) {
+      bulkUnselectBtn.style.display = ''; // Show
+    }
+
+    selectedEvents = data.events;
+    cacheVolunteerData.selectedEvents = selectedEvents;
+
+    const shiftsContainer = document.getElementById('selected-shifts-grid');
+
+    if (!shiftsContainer) {
+      console.error("selected-shifts-grid container not found. Tab active?", document.querySelector('.tab-content.active'));
+      return;
+    }
+
+    shiftsContainer.innerHTML = '';
+
+    // Only render events with at least one selected shift
+
+    selectedEvents.forEach((event, idx) => {
+      console.log("event.availableShifts:", JSON.stringify(event.availableShifts, null, 2));
+      let eventHTML = `
+        <div class="border rounded-xl p-6 mb-6" style="background-color: #eef3f9;">
+          <div class="mb-4">
+            <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
+            <p class="text-brand-text">Location: ${event["Location"]}</p>
+            <p class="text-brand-text">Start: ${new Date(event["Start Date"]).toLocaleString()} to End: ${new Date(event["End Date"]).toLocaleString()}</p>
+          </div>
+          <div class="p-4 rounded-lg bg-brand-info-bg">
+            <h4 class="font-semibold mb-2 text-brand-text">About ${event["Deceased Name"]}</h4>
+            <p class="text-brand-text text-sm leading-relaxed">${event["Personal Information"] || ""}</p>
+          </div>
+          <div class="mt-6">
+            <h4 class="font-bold mb-2 text-brand-text">Your Signed-Up Shifts</h4>
+            <div class="space-y-2">
+              ${
+                event.selectedShifts.map(shift =>
+                  `<button
+                    class="shift-select-btn bg-red-100 text-red-700"
+                    style="width:100%; padding:1em; margin-bottom:0.5em; border:1px solid #FBB; border-radius:8px;"
+                    data-shift-id="${shift["Shift ID"]}"
+                    onclick="toggleShiftRemoval('${shift["Shift ID"]}')"
+                  >
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <div>
+                        <p class="font-semibold">${shift["Shift Time"]}</p>
+                      </div>
+                      <span>${selectedRemovalIds.has(shift["Shift ID"]) ? "Selected for Removal" : "✓ Signed Up (Click to Unselect)"}</span>
+                    </div>
+                  </button>`
+                ).join('')
+              }
+            </div>
+          </div>
+        </div>
+      `;
+      shiftsContainer.innerHTML += eventHTML;
+    });
+    updateBulkRemovalButtonState();
+  }
+
+  /**
+   * Renders the Locations tab.
+   * Currently uses static content; `data` reserved for future dynamic info.
+   * @param {*} [data]
+   */
+  function renderLocations(data) {
+    console.log("== calling renderLocations ==");
+    hideLocationsLoader();
+
+    const container = document.getElementById('content-locations');
+    container.innerHTML = `
+      <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Mortuary Information</h2>
+      <div class="grid gap-6">
+        <!-- Crist Mortuary Block -->
+        <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+          <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+            <h3 class="text-lg font-semibold text-brand-text">Crist Mortuary</h3>
+          </div>
+          <div class="p-6 text-brand-text"> 
+            <div class="mb-4 opacity-90">
+              <p>3395 Penrose Place</p>
+              <p>Boulder, CO 80301</p>
+              <p class="mb-2">303-442-4411</p>
+              <a href="https://maps.google.com/?q=3395+Penrose+Place,+Boulder,+CO+80301" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
+                📍 Get Directions
+              </a>
+            </div>
+            <p class="leading-relaxed">
+              ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
+            </p>
+          </div>
+        </div>
+
+        <!-- Greenwood & Myers Mortuary Block -->
+        <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+          <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+            <h3 class="text-lg font-semibold text-brand-text">Greenwood & Myers Mortuary</h3>
+          </div>
+          <div class="p-6 text-brand-text">
+            <div class="mb-4 opacity-90">
+              <p>2969 Baseline Road</p>
+              <p>Boulder, CO 80303</p>
+              <p class="mb-2">(303) 440-3960</p>
+              <a href="https://maps.google.com/?q=2969+Baseline+Road,+Boulder,+CO+80303" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
+                📍 Get Directions
+              </a>
+            </div>
+            <p class="leading-relaxed">
+              ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Renders the Volunteer History tab.
+   * Currently uses static placeholder content; `data` reserved for future dynamic stats.
+   * @param {*} [data]
+   */
+  function renderVolunteerHistory(data) {
+    console.log("== calling renderVolunteerHistory ==");
+    hideSignupsLoader();
+
+    const container = document.getElementById('content-signups');
+    container.innerHTML = `
+      <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Your Volunteer History</h2>
+      <p class="text-sm text-brand-text/80 mb-6 p-4 rounded-lg bg-brand-info-bg border border-brand-shift-border">
+        Since a full historical year of data is not yet available, the statistics below focus on <strong>Year-To-Date (YTD) 2025</strong> figures. Once data for previous years is logged, this section will include a selector to view past historical trends.
+      </p>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+          <div class="text-3xl font-bold mb-1">47</div>
+          <div class="text-white opacity-90">2025 YTD Hours</div>
+        </div>
+        <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+          <div class="text-3xl font-bold mb-1">156</div>
+          <div class="text-white opacity-90">2025 YTD Number of Different Shmira</div>
+        </div>
+        <div class="rounded-xl p-6 text-white shadow-lg" style="background: #3D4066;">
+          <div class="text-3xl font-bold mb-1">85%</div>
+          <div class="text-white opacity-90">2025 Anything else</div>
+        </div>
+      </div>
+      <div class="mb-8 bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+        <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+          <h3 class="text-lg font-semibold text-brand-text">Your Volunteer Stats (2025 YTD)</h3>
+        </div>
+        <div class="p-6">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="text-center">
+              <div class="text-2xl font-bold text-brand-accent">12</div>
+              <div class="text-brand-text">2025 Hours</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-brand-accent">5</div>
+              <div class="text-brand-text">2025 Number of Different Shmira</div>
+            </div>
+            <div class="text-center">
+              <div class="text-2xl font-bold text-brand-accent">tbd</div>
+              <div class="text-brand-text">2025 Anything else</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
+        <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
+          <h3 class="text-lg font-semibold text-brand-text">BCK Shmira Stats (2025 YTD)</h3>
+        </div>
+        <div class="p-6">
+          <div class="space-y-6">
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-medium text-brand-text">2025 YTD Total BCK Requested Shifts</span>
+                <span class="text-sm text-brand-text/70">2025 YTD Total BCK Filled Shifts</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
+              </div>
+              <div class="text-sm text-brand-text/70 mt-1">2025 YTD % Shifts Filled</div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-medium text-brand-text">Community Fair</span>
+                <span class="text-sm text-brand-text/70">18/25 shifts filled</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-brand-signup h-3 rounded-full" style="width: 72%"></div>
+              </div>
+              <div class="text-sm text-brand-text/70 mt-1">72% complete</div>
+            </div>
+            <div>
+              <div class="flex justify-between items-center mb-2">
+                <span class="font-medium text-brand-text">Beach Cleanup</span>
+                <span class="text-sm text-brand-text/70">8/10 shifts filled</span>
+              </div>
+              <div class="w-full bg-gray-200 rounded-full h-3">
+                <div class="bg-brand-signup h-3 rounded-full" style="width: 80%"></div>
+              </div>
+              <div class="text-sm text-brand-text/70 mt-1">80% complete</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  /**
+   * Updates the state of the bulk removal button based on selectedRemovalIds.
+   */
+  function updateBulkRemovalButtonState() {
+    const btn = document.getElementById('bulk-unselect-btn');
+    if (btn) {
+      btn.disabled = selectedRemovalIds.size === 0;
+    }
+  }
+
+  /**
+   * Toggles selection for a shift in the Available Shifts tab.
+   * Always updates the selection set; only re-renders if cacheAvailableShifts is available.
+   * @param {string} shiftId
+   */
+  function toggleShiftSelection(shiftId) {
+    console.log("ShiftId passed into toggle:");
+    console.log(JSON.stringify(shiftId));
+
+    // Always update the selection set
+    if (selectedShiftIds.has(shiftId)) {
+      selectedShiftIds.delete(shiftId);
+    } else {
+      selectedShiftIds.add(shiftId);
+    }
+
+    // Only re-render if we have cached data to render from
+    if (cacheAvailableShifts && cacheAvailableShifts.events) {
+      renderAvailableShifts(cacheAvailableShifts);
+    } else {
+      console.warn("cacheAvailableShifts is not yet available; skipping re-render.");
+    }
+
+    updateBulkSignupButtonState();
+  }
+
+  /**
+   * Toggles selection for a shift in the My Shifts tab (for removal).
+   * @param {string} shiftId
+   */
+  function toggleShiftRemoval(shiftId) {
+    if (!cacheMyShifts || !cacheMyShifts.events) return;
+
+    if (selectedRemovalIds.has(shiftId)) {
+      selectedRemovalIds.delete(shiftId);
+    } else {
+      selectedRemovalIds.add(shiftId);
+    }
+
+    renderSelectedShifts(cacheMyShifts);
+    updateBulkRemovalButtonState();
+  }
+
+  /**
+   * Updates the state of the bulk signup button based on selectedShiftIds.
+   */
+  function updateBulkSignupButtonState() {
+    const btn = document.getElementById('bulk-signup-btn');
+    if (btn) {
+      btn.disabled = selectedShiftIds.size === 0;
+    }
+  }
+
+  /**
+   * Performs a bulk signup for selected shifts after confirmation.
+   */
+  async function performBulkSignup() {
+    const confirmed = await showConfirmationDialog("Please confirm you wish to add these shifts?");
+    if (!confirmed) {
+      console.log("User cancelled signup.");
+      return;
+    }
+
+    showLoading("Signing you up for shifts...");
+    const ids = Array.from(selectedShiftIds);
+    if (ids.length === 0) {
+      hideLoading();
+      return;
+    }
+    handleBulkShiftSignup(ids);
+  }
+
+  /**
+   * Performs a bulk removal of selected shifts after confirmation.
+   */
+  async function performBulkRemoval() {
+    const confirmed = await showConfirmationDialog("Are you sure you wish to remove these shifts?");
+    if (!confirmed) {
+      console.log("User cancelled removal.");
+      return;
+    }
+
+    showLoading("Removing you from shifts...");
+    const ids = Array.from(selectedRemovalIds);
+    if (ids.length === 0) {
+      hideLoading();
+      return;
+    }
+    handleBulkShiftRemoval(ids);
+  }
+
+  /**
+   * Shows the full-screen loading overlay with a custom message.
+   * @param {string} text
+   */
+  function showLoading(text) {
+    function setLoadingText(text) {
+      document.getElementById('loading-text').textContent = text;
+    }
+
+    setLoadingText(text);
+    document.getElementById('loading-overlay').style.display = 'flex';
+  }
+
+  /**
+   * Hides the full-screen loading overlay.
+   */
+  function hideLoading() {
+    document.getElementById('loading-overlay').style.display = 'none';
+  }
+
+  /**
+   * Sends selected shifts to the server to add them for the volunteer.
+   * @param {Array<string>} selectedShiftIds
+   */
+  function handleBulkShiftSignup(selectedShiftIds) {
+    console.log("got here - handleBulkShiftSignup");
+    console.log(selectedShiftIds);
+    cacheVolunteerData.selectedEvents = selectedEvents;  // Ensure the selected events are included
+    console.log("Passing cacheVolunteerData for setVolunteerShifts:", JSON.stringify(cacheVolunteerData));
+    callServerFunction("setVolunteerShifts", selectedShiftIds, cacheVolunteerData);
+  }
+
+  /**
+   * Sends selected shifts to the server to remove them for the volunteer.
+   * @param {Array<string>} shiftIds
+   */
+  function handleBulkShiftRemoval(shiftIds) {
+    console.log("got here - handleBulkShiftRemoval");
+    cacheVolunteerData.selectedEvents = selectedEvents;  // Ensure the selected events are included
+    console.log("Passing cacheVolunteerData for removeVolunteerShifts:", JSON.stringify(cacheVolunteerData));
+    callServerFunction("removeVolunteerShifts", shiftIds, cacheVolunteerData);
+  }
+
+  /**
+   * Generic server error handler for client-side logging and user feedback.
+   * @param {Error} error
+   */
+  function handleServerError(error) {
+    showMessage("Server Error: " + error.message + ". Please check your internet connection or contact support.", "error");
+    console.error("Client-side error from server call:", error.message);
+  }
+
+  /**
+   * Shows a temporary success message for signing up to a single shift.
+   * @param {string} shiftId
+   */
+  function signUpForShift(shiftId) {
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'fixed top-4 right-4 bg-brand-signup text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    messageDiv.textContent = '✅ Successfully signed up for shift!';
+    document.body.appendChild(messageDiv);
+
+    setTimeout(() => {
+      messageDiv.remove();
+    }, 3000);
+  }
+
+  /**
+   * Shows a confirmation dialog for cancelling a shift using a custom modal.
+   * @param {string} shiftId
+   */
+  function cancelShift(shiftId) {
+    const confirmDiv = document.createElement('div');
+    confirmDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+    confirmDiv.innerHTML = `
+      <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-xl">
+        <h3 class="text-lg font-semibold text-brand-text mb-4 font-headline">Cancel Shift?</h3>
+        <p class="text-brand-text/80 mb-6">Are you sure you want to cancel this shift? This action cannot be undone.</p>
+        <div class="flex gap-3 justify-end">
+          <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 text-brand-text/70 hover:bg-gray-100 rounded-lg font-medium transition-colors">
+            Keep Shift
+          </button>
+          <button onclick="confirmCancel('${shiftId}')" class="px-4 py-2 bg-brand-full hover:bg-brand-cancel text-white rounded-lg font-medium shadow-md transition-colors">
+            Cancel Shift
+          </button>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(confirmDiv);
+  }
+
+  /**
+   * Confirms cancellation of a shift and shows a success toast.
+   * @param {string} shiftId
+   */
+  function confirmCancel(shiftId) {
+    const confirmDialog = document.querySelector('.fixed.inset-0.bg-black');
+    if (confirmDialog) confirmDialog.remove();
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'fixed top-4 right-4 bg-brand-full text-white px-6 py-3 rounded-lg shadow-lg z-50';
+    messageDiv.textContent = '❌ Shift cancelled successfully';
+    document.body.appendChild(messageDiv);
+
+    setTimeout(() => {
+      messageDiv.remove();
+    }, 3000);
+  }
+
+  /**
+   * Shows an informational dialog with a single OK button.
+   * Resolves when the user clicks OK.
+   * @param {string} message
+   * @returns {Promise<void>}
+   */
+  function showMessage(message) {
+    return new Promise(resolve => {
+      const dialog = document.getElementById('information-dialog');
+      const messageElem = document.getElementById('information-message');
+      const okBtn = document.getElementById('confirm-ok');
+
+      messageElem.textContent = message;
+      dialog.classList.remove('hidden');
+
+      function cleanUp() {
+        okBtn.removeEventListener('click', onOk);
+        dialog.classList.add('hidden');
+      }
+
+      function onOk() {
+        cleanUp();
+        resolve();
+      }
+
+      okBtn.addEventListener('click', onOk);
+    });
+  }
+
+  /**
+   * Shows a Yes/No confirmation dialog.
+   * Resolves to true if Yes is clicked, false otherwise.
+   * @param {string} message
+   * @returns {Promise<boolean>}
+   */
+  function showConfirmationDialog(message) {
+    return new Promise((resolve) => {
+      const dialog = document.getElementById('confirmation-dialog');
+      const messageElem = document.getElementById('confirmation-message');
+      const yesBtn = document.getElementById('confirm-yes');
+      const noBtn = document.getElementById('confirm-no');
+
+      messageElem.textContent = message;
+      dialog.classList.remove('hidden');
+
+      function cleanup() {
+        yesBtn.removeEventListener('click', onYes);
+        noBtn.removeEventListener('click', onNo);
+        dialog.classList.add('hidden');
+      }
+
+      function onYes() {
+        cleanup();
+        resolve(true);
+      }
+
+      function onNo() {
+        cleanup();
+        resolve(false);
+      }
+
+      yesBtn.addEventListener('click', onYes);
+      noBtn.addEventListener('click', onNo);
+    });
+  }
+  
+</script>
