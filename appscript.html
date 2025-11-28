@@ -24,10 +24,8 @@
 
     // SERVER_DATA_JSON is defined in index.html
     const data = JSON.parse(SERVER_DATA_JSON);
-    console.log(data);
-    //const data = JSON.parse('<?= data ?>');
-
-    console.log('INJECTED KNOWN GOOD:', data);
+    //console.log(data);
+    //console.log('INJECTED KNOWN GOOD:', data);
 
     // Store the Volunteer data in a global cache object
     // TODO - eliminate passing this data on each server call.
@@ -39,8 +37,8 @@
       "selectedEvents": null
     };
 
-    console.log("Init cacheVolunteerData:", JSON.stringify(cacheVolunteerData));
-    console.log("index.html init launched. Volunteer Data received:" + JSON.stringify(cacheVolunteerData));
+    //console.log("Init cacheVolunteerData:", JSON.stringify(cacheVolunteerData));
+    //console.log("index.html init launched. Volunteer Data received:" + JSON.stringify(cacheVolunteerData));
 
     const welcomeMessage = document.getElementById('welcome-message');
     if (welcomeMessage && cacheVolunteerData.name) {
@@ -85,7 +83,7 @@
    * Shows loader for the My Shifts tab and hides its grid/button.
    */
   function showMyShiftsLoader() {
-    console.log("entering showMyShiftsLoader ");
+    //console.log("entering showMyShiftsLoader ");
     var loader = document.getElementById('my-shifts-loader');
     var grid = document.getElementById('selected-shifts-grid');
     var bulkUnselectBtn = document.getElementById('bulk-unselect-btn');
@@ -107,7 +105,7 @@
    * Hides loader for the My Shifts tab and shows its grid.
    */
   function hideMyShiftsLoader() {
-    console.log("entering hideMyShiftsLoader ");
+    //console.log("entering hideMyShiftsLoader ");
     var loader = document.getElementById('my-shifts-loader');
     var grid = document.getElementById('selected-shifts-grid');
 
@@ -120,37 +118,35 @@
     grid.style.display = '';
   }
 
+
   /**
-   * Shows loader for the Locations tab and hides its grid.
+   * Shows loader for the Locations tab.
    */
   function showLocationsLoader() {
     var loader = document.getElementById('locations-loader');
-    var grid = document.getElementById('locations-info-grid');
 
-    if (!loader || !grid) {
-      console.error("Locations loader or grid not found!", { loader, grid });
+    if (!loader) {
+      console.error("Locations loader not found!", { loader });
       return;
     }
 
     loader.style.display = '';
-    grid.style.display = 'none';
   }
 
   /**
-   * Hides loader for the Locations tab and shows its grid.
+   * Hides loader for the Locations tab.
    */
   function hideLocationsLoader() {
     var loader = document.getElementById('locations-loader');
-    var grid = document.getElementById('locations-info-grid');
 
-    if (!loader || !grid) {
-      console.error("Locations loader or grid not found!", { loader, grid });
+    if (!loader) {
+      console.error("Locations loader not found!", { loader });
       return;
     }
 
     loader.style.display = 'none';
-    grid.style.display = '';
   }
+
 
   /**
    * Shows loader for the Volunteer History tab and hides its grid.
@@ -216,7 +212,7 @@
    */
   function switchTab(tabName) {
     tableName = tabName; // Track current tab globally
-    console.log("== switchTab called ==");
+    //console.log("== switchTab called ==");
 
     // Hide all tab contents and deactivate tab buttons
     document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -239,8 +235,8 @@
 
     if (tabName === 'schedule') showScheduleLoader();
     if (tabName === 'my-shifts') showMyShiftsLoader();
-    if (tabName === 'locations') showLocationsLoader();
-    if (tabName === 'signups') showSignupsLoader();
+//    if (tabName === 'locations') showLocationsLoader();
+//    if (tabName === 'signups') showSignupsLoader();
 
     // Map tab name to server function
     const serverFunctionMap = {
@@ -264,8 +260,8 @@
     }
     const params = paramFn();
 
-    console.log('sending parameters to server:');
-    console.log(JSON.stringify(params));
+    //console.log('sending parameters to server:');
+    //console.log(JSON.stringify(params));
 
     callServerFunction(serverFunctionName, ...params);
   }
@@ -302,7 +298,7 @@
   function callServerFunction(functionName, parameter1, parameter2, parameter3) {
     google.script.run
       .withSuccessHandler(function (response) {
-        console.log("success handler" + functionName);
+        //console.log("success handler" + functionName);
         serverFunctionSuccessHandler(functionName, response);
       })
       .withFailureHandler(function (error) {
@@ -319,7 +315,7 @@
    * @returns {*}
    */
   function serverFunctionSuccessHandler(functionName, response) {
-    console.log(`Success calling ${functionName}:`, response);
+    //console.log(`Success calling ${functionName}:`, response);
     const targetFunction = HANDLER_FUNCTIONS[functionName];
 
     if (typeof targetFunction === 'function') {
@@ -387,12 +383,15 @@
    * @param {*} response
    */
   function successGetLocations(response) {
-//    showMessage("Thank you. Found Locations");
-//    console.log(`Thank you. Found Locations`);
+    showMessage("Thank you. Found Locations");
+    console.log(`Thank you. Found Locations`);
+
+    console.log('Locations:' + JSON.stringify(response));
 
     cacheLocations = response;
     renderLocations(response);
   }
+
 
   /**
    * Success handler for getVolunteerHistory.
@@ -414,7 +413,7 @@
    */
   function successSetVolunteerShifts(response) {
     showMessage("Thank you. Volunteer Shifts added");
-    console.log(`Thank you. Volunteer Shifts added`);
+    //console.log(`Thank you. Volunteer Shifts added`);
     selectedShiftIds = new Set();           // Remove previous selections so that we can start from scratch
     updateBulkSignupButtonState();          // Ensure bulk signup button reflects the cleared selection
     hideLoading();
@@ -428,7 +427,7 @@
    */
   function successRemoveVolunteerShifts(response) {
     showMessage("Thank you. Volunteer Shifts removed");
-    console.log(`Thank you. Volunteer Shifts removed`);
+    //console.log(`Thank you. Volunteer Shifts removed`);
     selectedRemovalIds = new Set();         // Remove previous selections so that we can start from scratch
     updateBulkRemovalButtonState();
     hideLoading();
@@ -442,8 +441,8 @@
   function renderAvailableShifts(data) {
     hideScheduleLoader();
 
-    console.log("== calling renderAvailableShifts ==");
-    console.log(JSON.stringify(data.events));
+    //console.log("== calling renderAvailableShifts ==");
+    //console.log(JSON.stringify(data.events));
 
     // Ensure the sign up button is displayed
     var bulkSignupBtn = document.getElementById('bulk-signup-btn');
@@ -587,60 +586,59 @@
   }
 
   /**
-   * Renders the Locations tab.
-   * Currently uses static content; `data` reserved for future dynamic info.
-   * @param {*} [data]
-   */
+   * Renders the Locations tab from server data.
+   * Expects data = { locations: [ {name, street, city, state, zip, phone, mapUrl}, ... ] }.
+   * @param {{locations:Array}} [data]
+  */
   function renderLocations(data) {
     console.log("== calling renderLocations ==");
-    hideLocationsLoader();
+    // hideLocationsLoader();  // disable for now
 
     const container = document.getElementById('content-locations');
-    container.innerHTML = `
+    if (!container) {
+      console.error("content-locations container not found");
+      return;
+    }
+
+    const payload = data || cacheLocations;
+    const locations = payload && payload.locations ? payload.locations : [];
+
+    let html = `
       <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Mortuary Information</h2>
       <div class="grid gap-6">
-        <!-- Crist Mortuary Block -->
-        <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
-          <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
-            <h3 class="text-lg font-semibold text-brand-text">Crist Mortuary</h3>
-          </div>
-          <div class="p-6 text-brand-text"> 
-            <div class="mb-4 opacity-90">
-              <p>3395 Penrose Place</p>
-              <p>Boulder, CO 80301</p>
-              <p class="mb-2">303-442-4411</p>
-              <a href="https://maps.google.com/?q=3395+Penrose+Place,+Boulder,+CO+80301" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
-                📍 Get Directions
-              </a>
-            </div>
-            <p class="leading-relaxed">
-              ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
-            </p>
-          </div>
-        </div>
+    `;
 
-        <!-- Greenwood & Myers Mortuary Block -->
+    locations.forEach(function(loc) {
+      html += `
         <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
           <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
-            <h3 class="text-lg font-semibold text-brand-text">Greenwood & Myers Mortuary</h3>
+            <h3 class="text-lg font-semibold text-brand-text">${loc.name || ''}</h3>
           </div>
           <div class="p-6 text-brand-text">
             <div class="mb-4 opacity-90">
-              <p>2969 Baseline Road</p>
-              <p>Boulder, CO 80303</p>
-              <p class="mb-2">(303) 440-3960</p>
-              <a href="https://maps.google.com/?q=2969+Baseline+Road,+Boulder,+CO+80303" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
-                📍 Get Directions
-              </a>
+              <p>${loc.street || ''}</p>
+              <p>${loc.city || ''}, ${loc.state || ''} ${loc.zip || ''}</p>
+              <p class="mb-2">${loc.phone || ''}</p>
+              ${loc.mapUrl
+                ? `<a href="${loc.mapUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
+                    📍 Get Directions
+                  </a>`
+                : ''
+              }
             </div>
             <p class="leading-relaxed">
               ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
             </p>
           </div>
         </div>
-      </div>
-    `;
+      `;
+    });
+
+    html += `</div>`;
+    container.innerHTML = html;
   }
+
+
 
   /**
    * Renders the Volunteer History tab.

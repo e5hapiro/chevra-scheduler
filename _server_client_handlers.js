@@ -177,6 +177,38 @@ function getVolunteerHistory(sheetInputs, volunteerToken) {
 }
 
 /**
+ * Server-side stub to get mortuary locations for the "Mortuary Information" tab.
+ * Delegates to bckLib.getLocations using the configured sheetInputs.
+ *
+ * @param {Object} sheetInputs - Configuration object containing SPREADSHEET_ID and LOCATIONS_SHEET.
+ * @returns {{locations:Array<Object>}} - Wrapper object containing an array of locations.
+ */
+function getLocations(sheetInputs) {
+  try {
+    console.log("--- START getLocations ---");
+    //console.log("sheetInputs: "+ JSON.stringify(sheetInputs));
+
+    // Call into the library function that actually reads the "Locations" sheet
+    var locations = bckLib.getLocations(sheetInputs);
+
+    // Wrap in an object so the client can extend the payload later if needed
+    return {
+      locations: locations
+    };
+
+  } catch (error) {
+    console.log("FATAL ERROR in getLocations: " + error.toString());
+    // Optional: surface a structured error back to the client instead of undefined
+    return {
+      locations: [],
+      error: error.toString()
+    };
+  }
+}
+
+
+
+/**
  * Server-side stub to trigger addition of volunteer shifts to sheet.
  */
 

@@ -62,6 +62,7 @@ function setConfigProperties() {
     VOLUNTEER_LIST_SHEET: 'Volunteer Shifts',
     GUESTS_SHEET: 'Guests',
     MEMBERS_SHEET: 'Members',
+    LOCATIONS_SHEET: 'Locations',
     EVENT_MAP: 'Event Map',
     ARCHIVE_EVENT_MAP: 'Archive Event Map',
     TOKEN_COLUMN_NUMBER: 12

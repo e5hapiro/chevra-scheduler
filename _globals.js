@@ -40,6 +40,7 @@ const SHIFTS_MASTER_SHEET = 'Shifts Master';
 const SIGNUPS_SHEET = 'Volunteer Signups';
 const GUESTS_SHEET = 'Guests';
 const MEMBERS_SHEET = 'Members';
+const LOCATIONS_SHEET = 'Locations';
 const EVENT_MAP = 'Event Map';
 const ARCHIVE_EVENT_MAP = 'Archive Event Map';
 
