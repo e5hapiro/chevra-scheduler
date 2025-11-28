@@ -383,10 +383,10 @@
    * @param {*} response
    */
   function successGetLocations(response) {
-    showMessage("Thank you. Found Locations");
-    console.log(`Thank you. Found Locations`);
+//    showMessage("Thank you. Found Locations");
+//    console.log(`Thank you. Found Locations`);
 
-    console.log('Locations:' + JSON.stringify(response));
+//    console.log('Locations:' + JSON.stringify(response));
 
     cacheLocations = response;
     renderLocations(response);
@@ -609,6 +609,7 @@
     `;
 
     locations.forEach(function(loc) {
+      //console.log(JSON.stringify(loc));
       html += `
         <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
           <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
@@ -627,7 +628,7 @@
               }
             </div>
             <p class="leading-relaxed">
-              ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS
+              ${loc.notes}
             </p>
           </div>
         </div>

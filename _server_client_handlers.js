@@ -109,6 +109,7 @@ function getMyShifts(sheetInputs, volunteerToken, isMember) {
  * Server-side stub to get mortuary information for the "Mortuary Information" tab.
  * Currently static, but could be extended to pull from Sheets or another data source.
  */
+/*
 function getLocations(sheetInputs, volunteerToken) {
 
  try {
@@ -135,6 +136,7 @@ function getLocations(sheetInputs, volunteerToken) {
   }
 
 }
+*/
 
 /**
  * Server-side stub to get volunteer history and stats for the "Volunteer History" tab.
