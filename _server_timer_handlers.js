@@ -36,25 +36,15 @@ function triggeredFunction() {
  */
 function setConfigProperties() {
 
-  const scriptProperties = PropertiesService.getScriptProperties();
-  scriptProperties.setProperty('DEBUG', 'true');
-  
-  const addressConfig = {
-    'Crist Mortuary': '3395 Penrose Pl, Boulder, CO 80301',
-    'Greenwood & Myers Mortuary': '2969 Baseline Road, Boulder, CO 80303'
-  };
-  scriptProperties.setProperty('ADDRESS_CONFIG', JSON.stringify(addressConfig));  
-  
   // Generate URL for email
   const webAppUrl = ScriptApp.getService().getUrl(); 
-  scriptProperties.setProperty('SCRIPT_URL', webAppUrl);  
-  ss = getActiveSpreadsheetId();
+ 
+ // scriptProperties.setProperty('SCRIPT_URL', webAppUrl);  
+  const ss = getActiveSpreadsheetId();
 
-
-
+  // hardcode the names of the sheet databases
   const sheetInputs = {
     DEBUG: DEBUG,
-    ADDRESS_CONFIG: addressConfig,
     SCRIPT_URL: webAppUrl,
     SPREADSHEET_ID: ss,
     EVENT_FORM_RESPONSES: 'Form Responses 1',
@@ -67,7 +57,6 @@ function setConfigProperties() {
     ARCHIVE_EVENT_MAP: 'Archive Event Map',
     TOKEN_COLUMN_NUMBER: 12
   };
-  scriptProperties.setProperty('SHEET_INPUTS', JSON.stringify(sheetInputs));
 
   return sheetInputs;
 
@@ -231,8 +220,12 @@ function getSpreadsheet_(SPREADSHEET_ID) {
  * @returns {string} The full physical address or a helpful message.
  * @private
  */
+/*
 function getAddressFromLocationName_(locationName) {
   // Use the locationName to look up the confidential address.
+
+
+  
   if (ADDRESS_CONFIG[locationName]) {
     return ADDRESS_CONFIG[locationName];
   }
@@ -240,6 +233,9 @@ function getAddressFromLocationName_(locationName) {
   // If the location is not configured (e.g., 'Virtual Shift', 'Other'), return the name.
   return locationName; 
 }
+*/
+
+
 
 function getActiveSpreadsheetId() {
   // 1. Get the Spreadsheet object for the active file
