@@ -36,8 +36,10 @@ function triggeredFunction() {
  */
 function setConfigProperties() {
 
-  // Generate URL for email
-  const webAppUrl = ScriptApp.getService().getUrl(); 
+  // For final deployment - Hardcode the script URL since I cannot rely upon getUrl which is buggy
+  const webAppUrl = "https://script.google.com/macros/s/AKfycbzoJZbDMqTQEG2PHuWeNVUNca8-S31igyjMa9BdQgmXbgTUIJIRTq2wQQJZdgPMlLwN/exec";
+  //const webAppUrl = ScriptApp.getService().getUrl(); 
+  console.log("webAppUrl: "+ webAppUrl);
  
  // scriptProperties.setProperty('SCRIPT_URL', webAppUrl);  
   const ss = getActiveSpreadsheetId();
@@ -61,6 +63,7 @@ function setConfigProperties() {
   return sheetInputs;
 
 }
+
 
 
 /**
@@ -212,29 +215,6 @@ function normalizeToken(str, toLower) {
 function getSpreadsheet_(SPREADSHEET_ID) {
   return SpreadsheetApp.openById(SPREADSHEET_ID);
 }
-
-/**
- * Looks up the confidential physical address based on the location name (e.g., 'Site A').
- * This function retrieves the secret address stored in ADDRESS_CONFIG.
- * @param {string} locationName The short name (e.g., 'Site A' or 'Site B').
- * @returns {string} The full physical address or a helpful message.
- * @private
- */
-/*
-function getAddressFromLocationName_(locationName) {
-  // Use the locationName to look up the confidential address.
-
-
-  
-  if (ADDRESS_CONFIG[locationName]) {
-    return ADDRESS_CONFIG[locationName];
-  }
-  
-  // If the location is not configured (e.g., 'Virtual Shift', 'Other'), return the name.
-  return locationName; 
-}
-*/
-
 
 
 function getActiveSpreadsheetId() {

@@ -104,40 +104,6 @@ function getMyShifts(sheetInputs, volunteerToken, isMember) {
 
 }
 
-
-/**
- * Server-side stub to get mortuary information for the "Mortuary Information" tab.
- * Currently static, but could be extended to pull from Sheets or another data source.
- */
-/*
-function getLocations(sheetInputs, volunteerToken) {
-
- try {
-
-    console.log("--- START getLocations ---");
-
-    return {
-      "Crist Mortuary": {
-        address: "3395 Penrose Place, Boulder, CO 80301",
-        phone: "303-442-4411",
-        directionsUrl: "https://maps.google.com/?q=3395+Penrose+Place,+Boulder,+CO+80301",
-        info: "ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS"
-      },
-      "Greenwood & Myers Mortuary": {
-        address: "2969 Baseline Road, Boulder, CO 80303",
-        phone: "(303) 440-3960",
-        directionsUrl: "https://maps.google.com/?q=2969+Baseline+Road,+Boulder,+CO+80303",
-        info: "ADD GEN’ MORTUARY INFO - LOCATION OF SHMIRA ROOM / BATHROOMS"
-      }
-    };
-
-  } catch (error) {
-    console.log("FATAL ERROR in getLocations: " + error.toString());
-  }
-
-}
-*/
-
 /**
  * Server-side stub to get volunteer history and stats for the "Volunteer History" tab.
  */
