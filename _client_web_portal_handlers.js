@@ -6,8 +6,8 @@
 * Web Portal and Google Form Initialization
 * -----------------------------------------------------------------
 * _webPortalInit.js
- * Version: 1.0.6
- * Last updated: 2025-11-10
+ * Version: 1.0.7
+ * Last updated: 2025-12-22
  * 
  * CHANGELOG 
  *   v1.0.1:
@@ -30,6 +30,8 @@
  *   - Added logging and error handling.
  *   v1.0.6:
  *   - Consolidated logic and moved standard logic to getShifts in bckLib
+ *   v1.0.7:
+ *   - Fixed bug in processFormSubmit, failed to include config properties in bckLib.updateShiftsAndEventMap(setConfigProperties())
  * 
  * Web Portal Initialization and Submit Handler
  * -----------------------------------------------------------------
@@ -130,7 +132,7 @@ function processFormSubmit(e) {
   Logger.log("Processing form submit");
   // Force updates
   bckLib.addToken(e, TOKEN_COLUMN_NUMBER)
-  bckLib.updateShiftsAndEventMap();
+  bckLib.updateShiftsAndEventMap(setConfigProperties());
 
 }
 

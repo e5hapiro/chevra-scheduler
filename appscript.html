@@ -1,22 +1,65 @@
-<!-- AppScript.html: all client-side JS for the Volunteer Portal -->
+<!-- appscript.html: all client-side JS for the Volunteer Portal -->
 <script>
-  // Global variable to cache server side function return data
+  /**
+   * Client-side controller for the Boulder Chevra Kadisha Shmira Volunteer Portal.
+   *
+   * Responsibilities:
+   * - Initialize the page with volunteer data injected by HtmlService (SERVER_DATA_JSON).
+   * - Manage tab navigation (Schedule, My Shifts, Locations, Volunteer History).
+   * - Render event, shift, and location data into the DOM.
+   * - Coordinate calls to server-side Apps Script functions via google.script.run.
+   * - Handle bulk signup/removal flows and show confirmation/info dialogs.
+   * -----------------------------------------------------------------
+   * appscript.js
+   * Version: 1.0.9 * Last updated: 2025-12-04
+   * 
+   * CHANGELOG v1.0.5:
+   *   - Initial implementation of Selection Form.
+   * v1.0.9:
+   *   - Implemented Avatar Acronyms 
+   *   - Improved code documentation
+   * -----------------------------------------------------------------
+   *
+   * This file is included into index.html using <?= include('appscript'); ?>.
+   */
+
+  /** @type {string | null} Name of the currently active tab. */
   let tableName = null;
+  /**
+   * Cached information about the logged-in volunteer.
+   * @type {{name:string, email:string, token:string, isMember:boolean, selectedEvents:?Array<object>} | null}
+   */
   let cacheVolunteerData = null;
+
+  /** @type {{name:string, token:string, isMember:boolean, events:Array<object>} | null} */
   let cacheAvailableShifts = null;
+
+  /** @type {{name:string, token:string, isMember:boolean, events:Array<object>} | null} */
   let cacheMyShifts = null;
+
+  /** @type {{locations:Array<object>} | null} */
   let cacheLocations = null;
+
+  /** @type {* | null} Cached volunteer history payload from the server. */
   let cacheVolunteerHistory = null;
 
   // Global sets and state to track selected shifts and volunteer context
+  /** @type {Set<string>} Shift IDs selected for signup on the Schedule tab. */
   var selectedShiftIds = new Set();
+
+  /** @type {Set<string>} Shift IDs selected for removal on the My Shifts tab. */
   var selectedRemovalIds = new Set();
+
+  /** @type {Array<object> | null} Raw events payload from the server. */
   var events = null;
+
+  /** @type {Array<object> | null} Events that have at least one selected shift. */
   var selectedEvents = null;
 
   /**
-   * Initializes the page with data injected from the server (DoGet/DoPost).
-   * Sets up the volunteer cache, welcome message, and loads the default tab.
+   * Initializes the page with data injected from the server (doGet/doPost).
+   * Sets up the volunteer cache, welcome message, avatar initials, hides loading,
+   * and loads the default tab.
    */
   function init() {
 
@@ -30,11 +73,11 @@
     // Store the Volunteer data in a global cache object
     // TODO - eliminate passing this data on each server call.
     cacheVolunteerData = {
-      "name": data.name,
-      "email": data.email,
-      "token": data.token,
-      "isMember": data.isMember,
-      "selectedEvents": null
+      'name': data.name,
+      'email': data.email,
+      'token': data.token,
+      'isMember': data.isMember,
+      'selectedEvents': null
     };
 
     //console.log("Init cacheVolunteerData:", JSON.stringify(cacheVolunteerData));
@@ -43,6 +86,12 @@
     const welcomeMessage = document.getElementById('welcome-message');
     if (welcomeMessage && cacheVolunteerData.name) {
       welcomeMessage.textContent = "Welcome, " + cacheVolunteerData.name;
+    }
+
+  // set initials in the avatar circle
+    const avatar = document.getElementById('avatar-initials');
+    if (avatar && cacheVolunteerData.name) {
+      avatar.textContent = getInitials(cacheVolunteerData.name);
     }
 
     hideLoading();         // Hides the loading indicator so it can be called later when loading data.
@@ -196,6 +245,8 @@
 
   /**
    * Map from server function name to a function that produces its parameter array.
+   * This keeps all google.script.run parameter wiring in one place.
+   * @type {{[key:string]: function(...any):Array<*>}}
    */
   const serverFunctionParams = {
     getAvailableShifts: () => [cacheVolunteerData.token, cacheVolunteerData.isMember],
@@ -290,10 +341,12 @@
 
   /**
    * Generic wrapper for google.script.run to call server-side functions.
-   * @param {string} functionName - Name of the server function handler.
-   * @param {*} parameter1
-   * @param {*} parameter2
-   * @param {*} parameter3
+   * @see https://developers.google.com/apps-script/guides/html/reference/run [web:29]
+   *
+   * @param {string} functionName Name of the server function handler.
+   * @param {*} [parameter1]
+   * @param {*} [parameter2]
+   * @param {*} [parameter3]
    */
   function callServerFunction(functionName, parameter1, parameter2, parameter3) {
     google.script.run
@@ -325,6 +378,22 @@
       return { success: false, message: `Function '${functionName}' not found.` };
     }
   }
+
+  /**
+   * Creates initials from a full name string (first + last word).
+   * Examples: "Ansel Adams" -> "AA", "Ansel" -> "AN".
+   *
+   * @param {string} fullName Full name of the user.
+   * @returns {string} Uppercase initials, or empty string if name is missing.
+   */
+  function getInitials(fullName) {
+    if (!fullName) return '';
+    const parts = fullName.trim().split(/\s+/);
+    const first = parts[0] ? parts[0][0] : '';
+    const last  = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return (first + last).toUpperCase();
+  }
+
 
   /**
    * Success handler for getAvailableShifts.
@@ -477,7 +546,9 @@
           <div class="mb-4">
             <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
             <p class="text-brand-text">Location: ${event["Location"]}</p>
-            <p class="text-brand-text">Start: ${new Date(event["Start Date"]).toLocaleString()} to End: ${new Date(event["End Date"]).toLocaleString()}</p>
+            <p class="text-brand-text">
+              Start: ${event.startDateDisplay} to End: ${event.endDateDisplay}
+            </p>
           </div>
           <div class="p-4 rounded-lg bg-brand-info-bg">
             <h4 class="font-semibold mb-2 text-brand-text">About ${event["Deceased Name"]}</h4>
@@ -498,7 +569,9 @@
                       >
                         <div style="display:flex; justify-content:space-between; align-items:center;">
                           <div>
-                            <p class="font-semibold">${shift["Shift Time"]}</p>
+                            <p class="font-semibold">
+                              ${shift["Shift Display"] || shift["Shift Time"]}
+                            </p>
                           </div>
                           <span>${selectedShiftIds.has(shift["Shift ID"]) ? "✓ Selected" : "Select"}</span>
                         </div>
@@ -523,17 +596,15 @@
 
     hideMyShiftsLoader();
 
-    // Ensure the button for unselecting events is displayed
     var bulkUnselectBtn = document.getElementById('bulk-unselect-btn');
     if (bulkUnselectBtn) {
-      bulkUnselectBtn.style.display = ''; // Show
+      bulkUnselectBtn.style.display = '';
     }
 
     selectedEvents = data.events;
     cacheVolunteerData.selectedEvents = selectedEvents;
 
     const shiftsContainer = document.getElementById('selected-shifts-grid');
-
     if (!shiftsContainer) {
       console.error("selected-shifts-grid container not found. Tab active?", document.querySelector('.tab-content.active'));
       return;
@@ -541,16 +612,24 @@
 
     shiftsContainer.innerHTML = '';
 
-    // Only render events with at least one selected shift
-
     selectedEvents.forEach((event, idx) => {
-      console.log("event.availableShifts:", JSON.stringify(event.availableShifts, null, 2));
+      // For debugging: see what the server actually sent
+      console.log("Selected event:", JSON.stringify(event, null, 2));
+
+      // Use server-side formatted event date range
+      const startDisplay = event.startDateDisplay || "";
+      const endDisplay   = event.endDateDisplay   || "";
+
       let eventHTML = `
         <div class="border rounded-xl p-6 mb-6" style="background-color: #eef3f9;">
           <div class="mb-4">
             <h3 class="text-lg font-semibold text-brand-text">${event["Deceased Name"]} Shmira</h3>
             <p class="text-brand-text">Location: ${event["Location"]}</p>
-            <p class="text-brand-text">Start: ${new Date(event["Start Date"]).toLocaleString()} to End: ${new Date(event["End Date"]).toLocaleString()}</p>
+            <p class="text-brand-text">
+              ${startDisplay && endDisplay
+                ? startDisplay + " to " + endDisplay
+                : ""}
+            </p>
           </div>
           <div class="p-4 rounded-lg bg-brand-info-bg">
             <h4 class="font-semibold mb-2 text-brand-text">About ${event["Deceased Name"]}</h4>
@@ -569,9 +648,15 @@
                   >
                     <div style="display:flex; justify-content:space-between; align-items:center;">
                       <div>
-                        <p class="font-semibold">${shift["Shift Time"]}</p>
+                        <p class="font-semibold">
+                          ${shift["Shift Display"] || shift["Shift Time"]}
+                        </p>
                       </div>
-                      <span>${selectedRemovalIds.has(shift["Shift ID"]) ? "Selected for Removal" : "✓ Signed Up (Click to Unselect)"}</span>
+                      <span>${
+                        selectedRemovalIds.has(shift["Shift ID"])
+                          ? "Selected for Removal"
+                          : "✓ Signed Up (Click to Unselect)"
+                      }</span>
                     </div>
                   </button>`
                 ).join('')
@@ -580,10 +665,13 @@
           </div>
         </div>
       `;
+
       shiftsContainer.innerHTML += eventHTML;
     });
+
     updateBulkRemovalButtonState();
   }
+
 
   /**
    * Renders the Locations tab from server data.

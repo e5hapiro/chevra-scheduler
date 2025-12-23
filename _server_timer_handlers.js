@@ -30,41 +30,6 @@ function triggeredFunction() {
 }
 
 
-/**
- * Sets script properties
- * @returns {void}
- */
-function setConfigProperties() {
-
-  // For final deployment - Hardcode the script URL since I cannot rely upon getUrl which is buggy
-  const webAppUrl = "https://script.google.com/macros/s/AKfycbzoJZbDMqTQEG2PHuWeNVUNca8-S31igyjMa9BdQgmXbgTUIJIRTq2wQQJZdgPMlLwN/exec";
-  //const webAppUrl = ScriptApp.getService().getUrl(); 
-  console.log("webAppUrl: "+ webAppUrl);
- 
- // scriptProperties.setProperty('SCRIPT_URL', webAppUrl);  
-  const ss = getActiveSpreadsheetId();
-
-  // hardcode the names of the sheet databases
-  const sheetInputs = {
-    DEBUG: DEBUG,
-    SCRIPT_URL: webAppUrl,
-    SPREADSHEET_ID: ss,
-    EVENT_FORM_RESPONSES: 'Form Responses 1',
-    SHIFTS_MASTER_SHEET: 'Shifts Master',
-    VOLUNTEER_LIST_SHEET: 'Volunteer Shifts',
-    GUESTS_SHEET: 'Guests',
-    MEMBERS_SHEET: 'Members',
-    LOCATIONS_SHEET: 'Locations',
-    EVENT_MAP: 'Event Map',
-    ARCHIVE_EVENT_MAP: 'Archive Event Map',
-    TOKEN_COLUMN_NUMBER: 12
-  };
-
-  return sheetInputs;
-
-}
-
-
 
 /**
  * Adds a unique token value (UUID) to the specified column in the row that triggered the event.
