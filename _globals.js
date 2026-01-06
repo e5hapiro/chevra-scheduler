@@ -31,6 +31,9 @@ const SPREADSHEET_ID = '1cCouQRRpEN0nUhN45m14_z3oaONo7HHgwyfYDkcu2mw';
 const VOLUNTEER_LIST_SHEET = 'Volunteers';
 const EVENT_FORM_RESPONSES = 'Form Responses 1';
 const SHIFTS_MASTER_SHEET = 'Shifts Master';
+const LATEST_EVENTS = '_view_active_events';
+const LATEST_MASTER = '_view_active_master';
+const LATEST_SHIFTS = '_view_active_shifts';
 const SIGNUPS_SHEET = 'Volunteer Signups';
 const GUESTS_SHEET = 'Guests';
 const MEMBERS_SHEET = 'Members';
@@ -66,6 +69,9 @@ function setConfigProperties() {
     EVENT_FORM_RESPONSES: 'Form Responses 1',
     SHIFTS_MASTER_SHEET: 'Shifts Master',
     VOLUNTEER_LIST_SHEET: 'Volunteer Shifts',
+    LATEST_EVENTS: '_view_active_events',
+    LATEST_MASTER: '_view_active_master',
+    LATEST_SHIFTS: '_view_active_shifts',
     GUESTS_SHEET: 'Guests',
     MEMBERS_SHEET: 'Members',
     LOCATIONS_SHEET: 'Locations',
