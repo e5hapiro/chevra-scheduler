@@ -21,6 +21,28 @@
  * Timing is critical. First create a new deployment with deploy button above, and then copy the URL into the WEB_APP_URL constant below 
  */
 
+/*
+
+
+/**
+ * Sets script properties
+ * @returns {void}
+ */
+function setConfigProperties() {
+
+  if (typeof bckLib === 'undefined') {
+    Logger.log("bckLib is undefined");
+    return;
+  }
+  const sheetInputs = bckLib.getSheetInputs();
+  console.log("webAppUrl: " + sheetInputs["SCRIPT_URL"]);
+
+  return sheetInputs;
+
+}
+
+
+
 // --- CONFIGURATION ---
 const DEBUG = true;
 const TOKEN_COLUMN_NUMBER = 12;
@@ -39,6 +61,8 @@ const GUESTS_SHEET = 'Guests';
 const MEMBERS_SHEET = 'Members';
 const LOCATIONS_SHEET = 'Locations';
 const EVENT_MAP = 'Event Map';
+const ARCHIVE_HISTORICAL = 'Historical Archive';
+const ARCHIVE_HISTORICAL_INDEX = 'Historical Archive Index';
 const ARCHIVE_EVENT_MAP = 'Archive Event Map';
 
 // Used to get specific types of shifts in event information
@@ -49,16 +73,12 @@ const SHIFT_FLAGS = {
   EVENT: 4,
 };
 
+/*
 
-/**
- * Sets script properties
- * @returns {void}
- */
-function setConfigProperties() {
+/*
 
    const webAppUrl = bckLib.getWebAppUrl();
 
-   console.log("webAppUrl: " + webAppUrl);
    const ss = getActiveSpreadsheetId();
 
   // hardcode the names of the sheet databases
@@ -76,11 +96,15 @@ function setConfigProperties() {
     MEMBERS_SHEET: 'Members',
     LOCATIONS_SHEET: 'Locations',
     EVENT_MAP: 'Event Map',
+    ARCHIVE_HISTORICAL: 'Historical Archive',
+    ARCHIVE_HISTORICAL_INDEX: 'Historical Archive Index',
     ARCHIVE_EVENT_MAP: 'Archive Event Map',
     TOKEN_COLUMN_NUMBER: 12
   };
 
   return sheetInputs;
 
-}
+*/
+
+
 

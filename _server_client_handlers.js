@@ -6,8 +6,10 @@
 * Redirects to the library
 * -----------------------------------------------------------------
 * _selection_form.js
-Version: 1.0.5 * Last updated: 2025-11-09
+Version: 1.0.6 * Last updated: 2026-03-23
  * 
+ * CHANGELOG v1.0.6:
+ *   - Added getDecedents
  * CHANGELOG v1.0.5:
  *   - Initial implementation of Selection Form.
  * -----------------------------------------------------------------
@@ -82,6 +84,15 @@ function cleanForReturn(obj) {
   return obj;
 }
 
+/**
+ * Server-side stub to get available decedents from "Latest Master" tab.
+ */
+function getDecedents(sheetInputs) {
+  // Fetch and return active decedents
+  // Example return format: Array of decedents
+  return cleanForReturn(bckLib.getDecedents(sheetInputs)); 
+
+}
 /**
  * Server-side stub to get available shifts data for "Schedule Shifts" tab.
  */
