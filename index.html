@@ -195,7 +195,23 @@
               <!-- Mortuary Location Information Tab -->
               <div id="content-locations" class="tab-content">
                 <div id="locations-loader" style="display:none;" class="p-6 text-center text-gray-500">Loading...</div>
-                <div class="grid gap-6" id="locations-info-grid"></div>
+                
+                <!-- NEW: Vertical Tabs Container -->
+                <div class="max-h-[70vh] overflow-hidden">
+                  <div class="flex h-[500px] bg-white rounded-lg shadow border">
+                    <!-- Vertical Tab Buttons (Left) -->
+                    <div id="location-tab-buttons" class="w-52 bg-brand-info-bg border-r border-brand-shift-border p-4 space-y-2 min-h-full">
+                      <!-- Buttons populated by JS -->
+                    </div>
+                    
+                    <!-- Tab Content (Right) -->
+                    <div class="flex-1 p-6 overflow-auto">
+                      <div id="location-tab-contents" class="space-y-4">
+                        <!-- Cards populated by JS -->
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <!-- Volunteer History Tab - To be added later

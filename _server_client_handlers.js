@@ -31,12 +31,12 @@ const HANDLER_FUNCTIONS = {
 
 function serverSideFunctionHandler(functionName, parameter1, parameter2, parameter3) {
 
-  //console.log("parameter1");
-  //console.log(parameter1);
-  //console.log("parameter2");
-  //console.log(parameter2);
-  //console.log("parameter3");
-  //console.log(parameter3);
+  console.log("parameter1");
+  console.log(parameter1);
+  console.log("parameter2");
+  console.log(parameter2);
+  console.log("parameter3");
+  console.log(parameter3);
 
 
   // 1. Get configuration

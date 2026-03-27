@@ -339,6 +339,44 @@
     }
   }
 
+  // Global variable to track current location tab
+  let currentLocationTab = 0;
+
+  /**
+   * Switches between location tabs in the vertical tabs UI.
+   * @param {number} index - 0-based index of location tab
+   */
+  function switchLocationTab(index) {
+    console.log(`Switching to location tab ${index}`);
+    
+    // Update tab buttons
+    document.querySelectorAll('#location-tab-buttons .location-tab-btn').forEach((btn, i) => {
+      if (i === index) {
+        btn.classList.add('bg-brand-background', 'text-brand-accent', 'font-semibold', 'shadow-md');
+        btn.classList.remove('hover:bg-brand-background', 'hover:text-brand-accent');
+      } else {
+        btn.classList.remove('bg-brand-background', 'text-brand-accent', 'font-semibold', 'shadow-md');
+        btn.classList.add('hover:bg-brand-background', 'hover:text-brand-accent');
+      }
+    });
+    
+    // Show/hide location cards
+    document.querySelectorAll('.location-card').forEach((card, i) => {
+      if (i === index) {
+        card.classList.remove('hidden');
+      } else {
+        card.classList.add('hidden');
+      }
+    });
+    
+    currentLocationTab = index;
+  }
+
+  // Make globally available
+  window.switchLocationTab = switchLocationTab;
+
+
+
   /**
    * Generic wrapper for google.script.run to call server-side functions.
    * @see https://developers.google.com/apps-script/guides/html/reference/run [web:29]
@@ -672,16 +710,12 @@
     updateBulkRemovalButtonState();
   }
 
-
   /**
-   * Renders the Locations tab from server data.
-   * Expects data = { locations: [ {name, street, city, state, zip, phone, mapUrl}, ... ] }.
-   * @param {{locations:Array}} [data]
-  */
+   * Renders the Locations tab as vertical tabs.
+   */
   function renderLocations(data) {
-    console.log("== calling renderLocations ==");
-    // hideLocationsLoader();  // disable for now
-
+    console.log("== calling renderLocations ==", data);
+    
     const container = document.getElementById('content-locations');
     if (!container) {
       console.error("content-locations container not found");
@@ -689,42 +723,84 @@
     }
 
     const payload = data || cacheLocations;
-    const locations = payload && payload.locations ? payload.locations : [];
+    const locations = payload?.locations || [];
 
     let html = `
       <h2 class="text-2xl font-bold mb-6 font-headline text-brand-text">Mortuary Information</h2>
-      <div class="grid gap-6">
     `;
 
-    locations.forEach(function(loc) {
-      //console.log(JSON.stringify(loc));
+    if (locations.length === 0) {
+      html += '<p class="text-gray-500">No locations found.</p>';
+      container.innerHTML = html;
+      return;
+    }
+
+    // Vertical tabs structure
+    html += `
+      <div class="flex h-[500px] bg-white rounded-lg shadow border">
+        <!-- Tab Buttons -->
+        <div id="location-tab-buttons" class="w-52 bg-brand-info-bg border-r border-brand-shift-border p-4 space-y-2">
+    `;
+
+    // Generate tab buttons
+    locations.forEach((loc, i) => {
+      const activeClass = i === 0 ? 'active bg-brand-background text-brand-accent font-semibold shadow-md' : '';
       html += `
-        <div class="bg-brand-background rounded-xl shadow-lg overflow-hidden border border-brand-shift-border">
-          <div class="px-6 py-4 bg-brand-info-bg border-b border-brand-shift-border">
-            <h3 class="text-lg font-semibold text-brand-text">${loc.name || ''}</h3>
+        <button onclick="switchLocationTab(${i})" class="location-tab-btn ${activeClass} w-full text-left py-3 px-4 rounded-lg border transition-all text-sm hover:bg-brand-background hover:text-brand-accent text-brand-text/80">
+          ${loc.name || `Location ${i+1}`}
+        </button>
+      `;
+    });
+
+    html += `
+        </div>
+        <!-- Tab Contents -->
+        <div class="flex-1 p-6 overflow-auto">
+          <div id="location-tab-contents" class="space-y-4">
+    `;
+
+    // Generate location cards ✅ LINES 1-10 ALREADY CORRECT
+    locations.forEach((loc, i) => {
+      const isActive = i === 0 ? '' : 'hidden';
+      html += `
+        <div class="location-card ${isActive} animate-fade-in">
+          <h3 class="text-xl font-bold mb-4 font-headline text-brand-text">${loc.name || ''}</h3>
+          
+          <div class="space-y-2 mb-6 opacity-90">
+            <p class="font-semibold text-lg">${loc.street || ''}</p>
+            <p class="text-lg">${loc.city || ''}, ${loc.state || ''} ${loc.zip || ''}</p>
+            <p class="text-xl font-semibold">${loc.phone || ''}</p>
+            ${loc.mapUrl ? `<a href="${loc.mapUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 p-2 bg-brand-accent/10 rounded-lg text-brand-accent hover:bg-brand-accent/20 transition-all">
+              📍 Get Directions
+            </a>` : ''}
           </div>
-          <div class="p-6 text-brand-text">
-            <div class="mb-4 opacity-90">
-              <p>${loc.street || ''}</p>
-              <p>${loc.city || ''}, ${loc.state || ''} ${loc.zip || ''}</p>
-              <p class="mb-2">${loc.phone || ''}</p>
-              ${loc.mapUrl
-                ? `<a href="${loc.mapUrl}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center underline hover:no-underline text-brand-accent">
-                    📍 Get Directions
-                  </a>`
-                : ''
-              }
+          
+          <div class="space-y-3 leading-relaxed text-brand-text/95">
+            <div class="p-4 bg-brand-info-bg/50 rounded-lg">
+              <p class="font-medium mb-2">Notes:</p>
+              <p>${loc.notes || ''}</p>
             </div>
-            <p class="leading-relaxed">
-              ${loc.notes}
-            </p>
+            
+            <!-- ✅ LINES 1-10 DISPLAY CORRECTLY HERE -->
+            <div class="space-y-2 pt-2 border-t border-brand-shift-border">
+              ${[1,2,3,4,5,6,7,8,9,10].map(n => {
+                const lineContent = loc[`line${n}`] || '';
+                return lineContent.trim() ? `<p class="flex items-start gap-2"><span class="w-2 h-2 bg-brand-accent rounded-full mt-1 flex-shrink-0"></span>${lineContent}</p>` : '';
+              }).join('')}
+            </div>
           </div>
         </div>
       `;
     });
 
-    html += `</div>`;
+    html += `
+          </div>
+        </div>
+      </div>
+    `;
+
     container.innerHTML = html;
+    hideLocationsLoader();
   }
 
 
