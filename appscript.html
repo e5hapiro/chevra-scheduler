@@ -11,13 +11,15 @@
    * - Handle bulk signup/removal flows and show confirmation/info dialogs.
    * -----------------------------------------------------------------
    * appscript.js
-   * Version: 1.0.9 * Last updated: 2025-12-04
+   * Version: 1.0.10 * Last updated: 2025-04-06
    * 
    * CHANGELOG v1.0.5:
    *   - Initial implementation of Selection Form.
    * v1.0.9:
    *   - Implemented Avatar Acronyms 
    *   - Improved code documentation
+   * v1.0.10:
+   *   - Uncommented locations-loader 
    * -----------------------------------------------------------------
    *
    * This file is included into index.html using <?= include('appscript'); ?>.
@@ -286,7 +288,7 @@
 
     if (tabName === 'schedule') showScheduleLoader();
     if (tabName === 'my-shifts') showMyShiftsLoader();
-//    if (tabName === 'locations') showLocationsLoader();
+    if (tabName === 'locations') showLocationsLoader();
 //    if (tabName === 'signups') showSignupsLoader();
 
     // Map tab name to server function
